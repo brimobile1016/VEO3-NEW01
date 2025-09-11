@@ -7,7 +7,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 
 
-const router = express();
+const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -257,5 +257,6 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
     return res.json({ error: "Terjadi kesalahan saat membuat gambar. Silakan coba lagi." });
   }
 });
+
 
 export default router
