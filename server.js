@@ -5,8 +5,6 @@ import main from './routes/main.js'
 
 const PORT = process.env.PORT || 7002 || 5000 || 3000
 
-var main = require('./routes/main')
-
 const app = express()
 app.enable('trust proxy')
 app.set("json spaces", 2)
@@ -21,4 +19,5 @@ app.listen(PORT, () => {
 })
 
 export default app
+
 
