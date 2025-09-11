@@ -24,10 +24,10 @@ if (!fs.existsSync(outputDirImage)) fs.mkdirSync(outputDirImage, { recursive: tr
 // ✅ Serve file statis
 // Rute untuk file root / akan memanggil view/index.html
 router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "view", "index.html"));
+  res.sendFile(path.join(__dirname, "views", "index.html"));
 });
 router.get("/ayo", (req, res) => {
-  res.sendFile(path.join(__dirname, "view", "ayo.html"));
+  res.sendFile(path.join(__dirname, "views", "ayo.html"));
 });
 
 // ✅ Serve file statis lainnya dari root folder
@@ -260,3 +260,4 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
 
 
 export default router
+
