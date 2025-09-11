@@ -8,7 +8,11 @@ import { Buffer } from "buffer";
 
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+// const upload = multer({ dest: "uploads/" });
+
+const upload = multer({
+  dest: path.join(os.tmpdir(), "uploads") // ✅ simpan di folder tmp
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -260,4 +264,5 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
 
 
 export default router
+
 
