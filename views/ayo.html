@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    video {
+      width: 80%;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+    }
+    .description {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h2>Video Hasil Generate</h2>
+  
+  <video controls>
+    <source src="/public/video/generated_video_88651.mp4" type="video/mp4">
+    Browser Anda tidak mendukung pemutar video.
+  </video>
+
+  <div class="description" id="video-info">Menghitung ukuran video...</div>
+
+  <script>
+    async function getVideoSize() {
+      try {
+        const response = await fetch("/public/video/generated_video_88651.mp4", { method: "HEAD" });
+        const contentLength = response.headers.get("Content-Length");
+        if (contentLength) {
+          const sizeMB = (contentLength / (1024 * 1024)).toFixed(2);
+          document.getElementById("video-info").innerText = `Ukuran video: ${sizeMB} MB`;
+        } else {
+          document.getElementById("video-info").innerText = "Ukuran video tidak dapat dihitung.";
+        }
+      } catch (error) {
+        document.getElementById("video-info").innerText = "Gagal mengambil ukuran video.";
+        console.error(error);
+      }
+    }
+
+    getVideoSize();
+  </script>
+</body>
+</html>
