@@ -94,7 +94,9 @@ async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
   }
 }
 
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "1234";
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASS = process.env.ADMIN_PASS || "1234";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 
 // Middleware untuk cek token
 function authMiddleware(req, res, next) {
@@ -216,17 +218,32 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
 });
 
 // List file
+router.post("/admin/login", express.json(), (req, res) => {
+  const { username, password } = req.body;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    return res.json({ token: ADMIN_TOKEN });
+  }
+  return res.status(401).json({ error: "Username/password salah" });
+});
+
+// Middleware cek token
+function authMiddleware(req, res, next) {
+  const token = req.headers["authorization"];
+  if (!token || token !== `Bearer ${ADMIN_TOKEN}`) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
+// ✅ List file
 router.get("/admin/files", authMiddleware, (req, res) => {
   const files = [];
 
-  // cek folder /tmp/images
   if (fs.existsSync(outputDirImage)) {
     fs.readdirSync(outputDirImage).forEach(f => {
       files.push({ type: "image", name: f });
     });
   }
-
-  // cek folder /tmp/video
   if (fs.existsSync(outputDirVideo)) {
     fs.readdirSync(outputDirVideo).forEach(f => {
       files.push({ type: "video", name: f });
@@ -236,45 +253,13 @@ router.get("/admin/files", authMiddleware, (req, res) => {
   res.json({ files });
 });
 
-// Serve file untuk preview
-router.get("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
-  const { type, filename } = req.params;
-  const dir = type === "video" ? outputDirVideo : outputDirImage;
-  const filePath = path.join(dir, filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("File tidak ditemukan");
-  }
-
-  const mimeType = type === "video" ? "video/mp4" : "image/png";
-  res.setHeader("Content-Type", mimeType);
-  res.setHeader("Content-Disposition", "inline");
-  fs.createReadStream(filePath).pipe(res);
-});
-
-// Delete file
-router.delete("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
-  const { type, filename } = req.params;
-  const dir = type === "video" ? outputDirVideo : outputDirImage;
-  const filePath = path.join(dir, filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File tidak ditemukan" });
-  }
-
-  fs.unlinkSync(filePath);
-  res.json({ success: true, message: `File ${filename} dihapus.` });
-});
-
-// Preview file dengan auth token di query string
+// ✅ Preview file (image/video)
 router.get("/admin/preview/:type/:filename", authMiddleware, (req, res) => {
   const { type, filename } = req.params;
-  const dir = type === "video" ? "videos" : "images";
-  const filePath = path.join("/tmp", dir, filename);
+  const dir = type === "video" ? outputDirVideo : outputDirImage;
+  const filePath = path.join(dir, filename);
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("File tidak ditemukan");
-  }
+  if (!fs.existsSync(filePath)) return res.status(404).send("File tidak ditemukan");
 
   const mimeType = mime.lookup(filePath) || "application/octet-stream";
   res.setHeader("Content-Type", mimeType);
@@ -282,6 +267,16 @@ router.get("/admin/preview/:type/:filename", authMiddleware, (req, res) => {
   fs.createReadStream(filePath).pipe(res);
 });
 
+// ✅ Delete file
+router.delete("/admin/delete/:type/:filename", authMiddleware, (req, res) => {
+  const { type, filename } = req.params;
+  const dir = type === "video" ? outputDirVideo : outputDirImage;
+  const filePath = path.join(dir, filename);
 
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
+
+  fs.unlinkSync(filePath);
+  res.json({ success: true, message: `File ${filename} dihapus.` });
+});
 
 export default router;
