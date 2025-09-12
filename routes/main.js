@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
+import mime from "mime-types";
 
 const router = express.Router();
 const upload = multer({
