@@ -145,8 +145,8 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const videoFile = operation.response.generatedVideos[0].video;
     console.log("[DEBUG] Video file object:", videoFile);
 
-    if (!videoFile?.uri) {
-      console.log("❌ [DEBUG] Video file URI kosong");
+    if (!videoFile) {
+      console.log("❌ [DEBUG] Video file kosong");
       return res.json({ error: "Video file kosong, gagal download." });
     }
 
@@ -154,22 +154,14 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const fileName = `generated_video_${randomNumber}.mp4`;
     const localPath = path.join(os.tmpdir(), fileName);
 
-    console.log("💾 [DEBUG] Download video dari URI ke lokal:", localPath);
+    console.log("💾 [DEBUG] Download video ke lokal:", localPath);
+    await ai.files.download({ file: videoFile, downloadPath: localPath });
 
-    try {
-      const response = await fetch(videoFile.uri);
-      if (!response.ok) {
-        console.log("❌ [DEBUG] Gagal fetch video:", response.statusText);
-        return res.json({ error: "Gagal download video dari Veo" });
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      fs.writeFileSync(localPath, Buffer.from(arrayBuffer));
-      console.log("✅ [DEBUG] Video berhasil didownload ke lokal:", localPath);
-    } catch (err) {
-      console.error("❌ [DEBUG] Error saat fetch video:", err);
-      return res.json({ error: "Gagal download video dari Veo" });
+    if (!fs.existsSync(localPath)) {
+      console.log("❌ [DEBUG] File video tidak ada setelah download");
+      return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
     }
+    console.log("✅ [DEBUG] Video berhasil di-download ke lokal:", localPath);
 
     console.log("📤 [DEBUG] Membaca file video untuk upload ke Supabase...");
     const fileBuffer = fs.readFileSync(localPath);
