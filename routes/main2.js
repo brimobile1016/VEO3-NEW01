@@ -22,9 +22,12 @@ const __dirname = path.dirname(__filename);
 const outputDir = path.join(__dirname, "public", "video");
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
-const outputDirImage = path.join(__dirname, "public", "images");
-if (!fs.existsSync(outputDirImage)) fs.mkdirSync(outputDirImage, { recursive: true });
+// const outputDirImage = path.join(__dirname, "public", "images");
+// if (!fs.existsSync(outputDirImage)) fs.mkdirSync(outputDirImage, { recursive: true });
 
+// sementara
+const outputDirImage = path.join(os.tmpdir(), "images");
+if (!fs.existsSync(outputDirImage)) fs.mkdirSync(outputDirImage, { recursive: true });
 
 // ✅ Serve file statis
 // Rute untuk file root / akan memanggil view/index.html
@@ -269,6 +272,7 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
 
 
 export default router
+
 
 
 
