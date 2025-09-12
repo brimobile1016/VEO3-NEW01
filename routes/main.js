@@ -92,10 +92,14 @@ router.get("/preview/:type/:filename", (req, res) => {
     return res.status(404).send("File tidak ditemukan");
   }
 
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+
   const mimeType = mime.lookup(filePath) || "application/octet-stream";
   res.setHeader("Content-Type", mimeType);
   res.setHeader("Content-Length", fileSize);
   res.setHeader("Content-Disposition", "inline");
+
   fs.createReadStream(filePath).pipe(res);
 });
 
