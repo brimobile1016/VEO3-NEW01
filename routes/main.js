@@ -8,7 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 import mime from "mime-types";
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from "../lib/supabase.js";
+import { supabase } from "./supabase.js";
 
 const router = express.Router();
 const upload = multer({
