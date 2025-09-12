@@ -210,17 +210,15 @@ router.get("/admin/files", authMiddleware, (req, res) => {
   const files = [];
 
   // cek folder /tmp/images
-  const imgDir = path.join("/tmp", "images");
-  if (fs.existsSync(imgDir)) {
-    fs.readdirSync(imgDir).forEach(f => {
+  if (fs.existsSync(outputDirImage)) {
+    fs.readdirSync(outputDirImage).forEach(f => {
       files.push({ type: "image", name: f });
     });
   }
 
-  // cek folder /tmp/videos
-  const vidDir = path.join("/tmp", "videos");
-  if (fs.existsSync(vidDir)) {
-    fs.readdirSync(vidDir).forEach(f => {
+  // cek folder /tmp/video
+  if (fs.existsSync(outputDirVideo)) {
+    fs.readdirSync(outputDirVideo).forEach(f => {
       files.push({ type: "video", name: f });
     });
   }
@@ -228,17 +226,17 @@ router.get("/admin/files", authMiddleware, (req, res) => {
   res.json({ files });
 });
 
-// Serve file (lihat preview)
+// Serve file untuk preview
 router.get("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
   const { type, filename } = req.params;
-  const dir = type === "video" ? "videos" : "images";
-  const filePath = path.join("/tmp", dir, filename);
+  const dir = type === "video" ? outputDirVideo : outputDirImage;
+  const filePath = path.join(dir, filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).send("File tidak ditemukan");
   }
 
-  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  const mimeType = type === "video" ? "video/mp4" : "image/png";
   res.setHeader("Content-Type", mimeType);
   res.setHeader("Content-Disposition", "inline");
   fs.createReadStream(filePath).pipe(res);
@@ -247,8 +245,8 @@ router.get("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
 // Delete file
 router.delete("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
   const { type, filename } = req.params;
-  const dir = type === "video" ? "videos" : "images";
-  const filePath = path.join("/tmp", dir, filename);
+  const dir = type === "video" ? outputDirVideo : outputDirImage;
+  const filePath = path.join(dir, filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "File tidak ditemukan" });
@@ -257,7 +255,6 @@ router.delete("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
   fs.unlinkSync(filePath);
   res.json({ success: true, message: `File ${filename} dihapus.` });
 });
-
 
 
 export default router;
