@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import secure from 'ssl-express-www'
 import main from './routes/main.js'
-import { supabase } from './lib/supabase.js'
+import { supabase } from './routes/supabase.js'
 
 const PORT = process.env.PORT || 7002 || 5000 || 3000
 
