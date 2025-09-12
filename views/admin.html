@@ -9,6 +9,39 @@
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background: #f4f4f4; }
     button { padding: 6px 12px; cursor: pointer; }
+
+    /* Popup modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 80%;
+      max-height: 80%;
+      overflow: auto;
+      text-align: center;
+    }
+    .modal-content img, .modal-content video {
+      max-width: 100%;
+      max-height: 70vh;
+    }
+    .close-btn {
+      background: red;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -27,6 +60,14 @@
     <tbody id="file-list"></tbody>
   </table>
 
+  <!-- Modal Popup -->
+  <div id="previewModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal()">Tutup</button>
+      <div id="previewContainer"></div>
+    </div>
+  </div>
+
   <script>
     async function loadFiles() {
       const res = await fetch("/admin/files");
@@ -39,7 +80,10 @@
         tr.innerHTML = `
           <td>${file.type}</td>
           <td>${file.name}</td>
-          <td><button onclick="deleteFile('${file.type}', '${file.name}')">Hapus</button></td>
+          <td>
+            <button onclick="previewFile('${file.type}', '${file.name}')">Lihat</button>
+            <button onclick="deleteFile('${file.type}', '${file.name}')">Hapus</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -51,6 +95,26 @@
       const result = await res.json();
       alert(result.message || "File dihapus");
       loadFiles();
+    }
+
+    function previewFile(type, filename) {
+      const modal = document.getElementById("previewModal");
+      const container = document.getElementById("previewContainer");
+      container.innerHTML = "";
+
+      let fileUrl = `/tmp/${type === "video" ? "videos" : "images"}/${filename}`;
+
+      if (type === "image") {
+        container.innerHTML = `<img src="${fileUrl}" alt="${filename}">`;
+      } else if (type === "video") {
+        container.innerHTML = `<video controls src="${fileUrl}"></video>`;
+      }
+
+      modal.style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("previewModal").style.display = "none";
     }
 
     loadFiles();
