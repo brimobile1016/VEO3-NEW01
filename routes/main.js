@@ -50,28 +50,35 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const { apiKey, prompt, aspectRatio, veoModel } = req.body;
     const file = req.file;
 
+    console.log("🚀 [DEBUG] Start generate-video endpoint");
+    console.log("[DEBUG] Request body:", req.body);
+    console.log("[DEBUG] File upload:", file);
+
     if (!apiKey) {
+      console.log("❌ [DEBUG] API Key tidak diisi");
       return res.json({ error: "API Key wajib diisi!" });
     }
 
     if (!prompt) {
+      console.log("❌ [DEBUG] Prompt tidak diisi");
       return res.json({ error: "PROMPT Key wajib diisi!" });
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    console.log("🔑 [DEBUG] GoogleGenAI instance dibuat");
 
     let imageData = null;
 
     if (file) {
-      // ✅ Jika user upload gambar
+      console.log("📷 [DEBUG] File image ditemukan, membaca file...");
       const imageBytes = fs.readFileSync(file.path);
       imageData = {
         imageBytes: imageBytes.toString("base64"),
         mimeType: file.mimetype,
       };
+      console.log("[DEBUG] Image data berhasil dibuat dari file upload");
     } else {
-      // ✅ Jika tidak ada gambar → generate dengan Imagen
-      console.log("📷 Tidak ada gambar, generate image via Imagen...");
+      console.log("📷 [DEBUG] Tidak ada gambar, generate image via Imagen...");
       const imagenResponse = await retryRequest(() =>
         ai.models.generateImages({
           model: "imagen-4.0-generate-001",
@@ -84,7 +91,10 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         })
       );
 
+      console.log("[DEBUG] Imagen response:", JSON.stringify(imagenResponse, null, 2));
+
       if (!imagenResponse.generatedImages?.length) {
+        console.log("❌ [DEBUG] Gagal generate gambar dengan Imagen");
         return res.json({ error: "Gagal generate gambar dengan Imagen." });
       }
 
@@ -92,9 +102,10 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
         mimeType: "image/png",
       };
+      console.log("[DEBUG] Image data berhasil dibuat dari Imagen");
     }
 
-    // ✅ Lanjut generate video dengan Veo 3
+    console.log("🎬 [DEBUG] Generate video dengan Veo 3 dimulai...");
     let options = {
       model: veoModel || "veo-3.0-generate-001",
       prompt,
@@ -106,42 +117,58 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     };
 
     let operation = await ai.models.generateVideos(options);
+    console.log("[DEBUG] Operation awal:", JSON.stringify(operation, null, 2));
 
-    // Ambil ID operasi
     const operationId = operation.name || operation.operationId || operation.id;
     if (!operationId) {
+      console.log("❌ [DEBUG] Gagal mendapatkan operationId");
       return res.json({ error: "Gagal mendapatkan operationId dari response." });
     }
+    console.log("🆔 [DEBUG] Operation ID:", operationId);
 
-    // ✅ Polling sampai selesai
+    // Polling sampai selesai
     while (!operation.done) {
-      console.log("⏳ Menunggu proses video...");
-      await new Promise((r) => setTimeout(r, 8000));
+      console.log("⏳ [DEBUG] Menunggu proses video...");
+      await new Promise((r) => setTimeout(r, 5000)); // polling lebih cepat untuk debug
       operation = await ai.operations.getVideosOperation({ operation });
+      console.log("🔁 [DEBUG] Operation update:", operation.done ? "Selesai" : "Belum selesai");
     }
 
+    console.log("[DEBUG] Operation selesai:", JSON.stringify(operation, null, 2));
+
     if (!operation.response?.generatedVideos?.length) {
+      console.log("❌ [DEBUG] Gagal membuat video");
       return res.json({ error: "Gagal membuat video, coba lagi." });
     }
 
-
     const videoFile = operation.response.generatedVideos[0].video;
+    console.log("[DEBUG] Video file object:", videoFile);
+
+    if (!videoFile) {
+      console.log("❌ [DEBUG] Video file kosong");
+      return res.json({ error: "Video file kosong, gagal download." });
+    }
 
     const randomNumber = Math.floor(10000 + Math.random() * 90000);
     const fileName = `generated_video_${randomNumber}.mp4`;
-const localPath = path.join(os.tmpdir(), fileName);
+    const localPath = path.join(os.tmpdir(), fileName);
 
-    // ✅ Simpan ke server lokal
-//   const outputPath = path.join(outputDir, "output_video.mp4");
-    await ai.files.download({ file: videoFile, downloadPath: localPath });
+    console.log("💾 [DEBUG] Download video ke lokal:", localPath);
+    try {
+      await ai.files.download({ file: videoFile, downloadPath: localPath });
+    } catch (err) {
+      console.error("❌ [DEBUG] Error saat download video:", err);
+      return res.json({ error: "Gagal download video dari Veo" });
+    }
 
     if (!fs.existsSync(localPath)) {
+      console.log("❌ [DEBUG] File video tidak ada setelah download");
       return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
     }
 
-    console.log("📤 Upload video ke Supabase...");
+    console.log("📤 [DEBUG] Membaca file video untuk upload ke Supabase...");
+    const fileBuffer = fs.readFileSync(localPath);
 
-const fileBuffer = fs.readFileSync(localPath);
     const { error: uploadError } = await supabase.storage
       .from("generated-files")
       .upload(`videos/${fileName}`, fileBuffer, {
@@ -150,9 +177,10 @@ const fileBuffer = fs.readFileSync(localPath);
       });
 
     fs.unlinkSync(localPath);
+    console.log("🗑 [DEBUG] File lokal dihapus");
 
     if (uploadError) {
-      console.error("❌ Upload error:", uploadError.message);
+      console.error("❌ [DEBUG] Upload error:", uploadError.message);
       return res.json({ error: "Gagal upload ke Supabase" });
     }
 
@@ -160,19 +188,18 @@ const fileBuffer = fs.readFileSync(localPath);
       .from("generated-files")
       .getPublicUrl(`videos/${fileName}`);
 
-    console.log("✅ Video URL:", data.publicUrl);
+    console.log("✅ [DEBUG] Video URL:", data.publicUrl);
     res.json({ videoUrl: data.publicUrl, fileName });
 
   } catch (err) {
-    console.error("❌ ERROR:", err);
-
+    console.error("❌ [DEBUG] ERROR:", err);
     if (err.message && err.message.includes("API key not valid")) {
       return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
     }
-
     return res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
+
 
 // ✅ API untuk generate gambar (penambahan baru)
 router.post("/generate-image", upload.single("image"), async (req, res) => {
