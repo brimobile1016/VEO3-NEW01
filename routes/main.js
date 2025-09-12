@@ -160,7 +160,12 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     res.json({ videoUrl: `/public/video/${fileName}`, fileName });
   } catch (err) {
     console.error("❌ ERROR:", err);
-    return res.json({ error: "Terjadi kesalahan saat membuat video." });
+
+    if (err.message && err.message.includes("API key not valid")) {
+      return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
+    }
+
+    return res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
 
@@ -201,7 +206,12 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
     res.json({ imageUrl: `/public/images/${fileName}` });
   } catch (err) {
     console.error("❌ ERROR:", err);
-    return res.json({ error: "Terjadi kesalahan saat membuat gambar." });
+
+    if (err.message && err.message.includes("API key not valid")) {
+      return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
+    }
+
+    return res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
 
