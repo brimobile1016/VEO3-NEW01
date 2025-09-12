@@ -8,42 +8,74 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background: #f4f4f4; }
-    button { padding: 6px 12px; cursor: pointer; }
+    button { padding: 6px 12px; cursor: pointer; margin: 2px; }
+
+    /* Login form */
+    #loginForm { margin-bottom: 20px; }
+    #fileManager { display: none; }
 
     /* Popup modal */
-    .modal { display: none; position: fixed; z-index: 9999;
-      left: 0; top: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
-    .modal-content { background: #fff; padding: 20px; border-radius: 8px;
-      max-width: 80%; max-height: 80%; overflow: auto; text-align: center; }
-    .modal-content img, .modal-content video { max-width: 100%; max-height: 70vh; }
-    .close-btn { background: red; color: #fff; border: none;
-      padding: 6px 12px; cursor: pointer; margin-bottom: 10px; }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 80%;
+      max-height: 80%;
+      overflow: auto;
+      text-align: center;
+    }
+    .modal-content img, .modal-content video {
+      max-width: 100%;
+      max-height: 70vh;
+    }
+    .close-btn {
+      background: red;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Admin Dashboard</h1>
 
-  <!-- Form Login -->
+  <!-- 🔑 Login Form -->
   <div id="loginForm">
-    <h2>Login</h2>
-    <input id="username" placeholder="Username"><br><br>
-    <input id="password" type="password" placeholder="Password"><br><br>
-    <button onclick="login()">Login</button>
+    <h2>Login Admin</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="loginAdmin()">Login</button>
   </div>
 
-  <!-- Dashboard -->
-  <div id="dashboard" style="display:none;">
+  <!-- 📂 File Manager -->
+  <div id="fileManager">
+    <button onclick="logoutAdmin()">Logout</button>
     <h2>Daftar File</h2>
     <table>
       <thead>
-        <tr><th>Type</th><th>Filename</th><th>Aksi</th></tr>
+        <tr>
+          <th>Type</th>
+          <th>Filename</th>
+          <th>Aksi</th>
+        </tr>
       </thead>
       <tbody id="file-list"></tbody>
     </table>
   </div>
 
-  <!-- Modal Popup -->
+  <!-- 🔍 Modal Preview -->
   <div id="previewModal" class="modal">
     <div class="modal-content">
       <button class="close-btn" onclick="closeModal()">Tutup</button>
@@ -52,9 +84,7 @@
   </div>
 
   <script>
-    let ADMIN_TOKEN = localStorage.getItem("ADMIN_TOKEN");
-
-    async function login() {
+    async function loginAdmin() {
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
 
@@ -64,25 +94,35 @@
         body: JSON.stringify({ username, password })
       });
 
-      if (!res.ok) {
-        alert("Login gagal");
-        return;
-      }
-
       const data = await res.json();
-      ADMIN_TOKEN = data.token;
-      localStorage.setItem("ADMIN_TOKEN", ADMIN_TOKEN);
 
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
+      if (data.token) {
+        localStorage.setItem("adminToken", data.token);
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("fileManager").style.display = "block";
+        loadFiles();
+      } else {
+        alert("Login gagal: " + (data.error || "Unknown error"));
+      }
+    }
 
-      loadFiles();
+    function logoutAdmin() {
+      localStorage.removeItem("adminToken");
+      document.getElementById("loginForm").style.display = "block";
+      document.getElementById("fileManager").style.display = "none";
     }
 
     async function loadFiles() {
+      const token = localStorage.getItem("adminToken");
+      if (!token) {
+        alert("Belum login!");
+        return;
+      }
+
       const res = await fetch("/admin/files", {
-        headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
+        headers: { "Authorization": `Bearer ${token}` }
       });
+
       const data = await res.json();
       const tbody = document.getElementById("file-list");
       tbody.innerHTML = "";
@@ -95,27 +135,37 @@
           <td>
             <button onclick="previewFile('${file.type}', '${file.name}')">Lihat</button>
             <button onclick="deleteFile('${file.type}', '${file.name}')">Hapus</button>
-          </td>`;
+          </td>
+        `;
         tbody.appendChild(tr);
       });
     }
 
     async function deleteFile(type, filename) {
+      const token = localStorage.getItem("adminToken");
       if (!confirm(`Yakin ingin menghapus ${filename}?`)) return;
+
       const res = await fetch(`/admin/delete/${type}/${filename}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
+        headers: { "Authorization": `Bearer ${token}` }
       });
+
       const result = await res.json();
       alert(result.message || "File dihapus");
       loadFiles();
     }
 
     async function previewFile(type, filename) {
+      const token = localStorage.getItem("adminToken");
+
       const res = await fetch(`/admin/preview/${type}/${filename}`, {
-        headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
+        headers: { "Authorization": `Bearer ${token}` }
       });
-      if (!res.ok) { alert("Gagal load file"); return; }
+
+      if (!res.ok) {
+        alert("Gagal load file: " + res.status);
+        return;
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -126,7 +176,7 @@
       if (type === "image") {
         container.innerHTML = `<img src="${url}" alt="${filename}">`;
       } else if (type === "video") {
-        container.innerHTML = `<video controls src="${url}"></video>`;
+        container.innerHTML = `<video controls><source src="${url}" type="video/mp4"></video>`;
       }
 
       document.getElementById("previewModal").style.display = "flex";
@@ -136,12 +186,15 @@
       document.getElementById("previewModal").style.display = "none";
     }
 
-    // Auto-login kalau token masih valid
-    if (ADMIN_TOKEN) {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("dashboard").style.display = "block";
-      loadFiles();
-    }
+    // Auto login check
+    window.onload = () => {
+      const token = localStorage.getItem("adminToken");
+      if (token) {
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("fileManager").style.display = "block";
+        loadFiles();
+      }
+    };
   </script>
 </body>
 </html>
