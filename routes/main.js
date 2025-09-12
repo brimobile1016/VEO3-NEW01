@@ -82,6 +82,22 @@ router.get("/public/images/:filename", (req, res) => {
   res.sendFile(filePath);
 });
 
+// ✅ Preview file untuk user (tanpa authMiddleware)
+router.get("/preview/:type/:filename", (req, res) => {
+  const { type, filename } = req.params;
+  const dir = type === "video" ? outputDirVideo : outputDirImage;
+  const filePath = path.join(dir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File tidak ditemukan");
+  }
+
+  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Disposition", "inline");
+  fs.createReadStream(filePath).pipe(res);
+});
+
 // 🔁 helper untuk retry
 async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -151,7 +167,8 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       downloadPath: outputPath,
     });
 
-    res.json({ videoUrl: `/public/video/${fileName}`, fileName });
+//    res.json({ videoUrl: `/public/video/${fileName}`, fileName });
+    res.json({ videoUrl: `/preview/video/${fileName}`, fileName });
   } catch (err) {
     console.error("❌ ERROR:", err);
 
