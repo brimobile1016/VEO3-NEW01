@@ -83,13 +83,32 @@ router.get("/public/images/:filename", (req, res) => {
 });
 
 // ✅ Preview file untuk user (tanpa authMiddleware)
-router.get("/preview/:type/:filename", (req, res) => {
+/* router.get("/preview/:type/:filename", (req, res) => {
   const { type, filename } = req.params;
   const dir = type === "video" ? outputDirVideo : outputDirImage;
   const filePath = path.join(dir, filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).send("File tidak ditemukan");
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+
+  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Length", fileSize);
+  res.setHeader("Content-Disposition", "inline");
+
+  fs.createReadStream(filePath).pipe(res);
+}); */
+
+// ✅ Preview file untuk user (tanpa auth)
+router.get("/preview/video/:filename", (req, res) => {
+  const filePath = path.join(outputDirVideo, req.params.filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("Video tidak ditemukan");
   }
 
   const stat = fs.statSync(filePath);
