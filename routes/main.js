@@ -266,5 +266,22 @@ router.delete("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
   res.json({ success: true, message: `File ${filename} dihapus.` });
 });
 
+// Preview file dengan auth token di query string
+router.get("/admin/preview/:type/:filename", authMiddleware, (req, res) => {
+  const { type, filename } = req.params;
+  const dir = type === "video" ? "videos" : "images";
+  const filePath = path.join("/tmp", dir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File tidak ditemukan");
+  }
+
+  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Disposition", "inline");
+  fs.createReadStream(filePath).pipe(res);
+});
+
+
 
 export default router;
