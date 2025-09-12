@@ -1,4 +1,3 @@
-// routes/main.js
 import express from "express";
 import multer from "multer";
 import os from "os";
@@ -14,15 +13,6 @@ const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// halaman utama
-router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "views", "index.html"));
-});
-
-router.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "views", "admin.html"));
-});
 
 // helper retry
 async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
@@ -41,42 +31,91 @@ const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "1234";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 
-// API generate video
+// ====================== API GENERATE VIDEO ======================
 router.post("/generate-video", upload.single("image"), async (req, res) => {
   try {
     const { apiKey, prompt, aspectRatio, veoModel } = req.body;
     if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
 
+    console.log("🚀 Mulai generate video...");
+    console.log("🔑 API Key:", apiKey ? "OK (ada)" : "❌ kosong");
+    console.log("📝 Prompt:", prompt);
+
     const ai = new GoogleGenAI({ apiKey });
-    const operation = await ai.models.generateVideos({
+    let imageData = null;
+    const file = req.file;
+
+    if (file) {
+      // ✅ Jika user upload gambar
+      console.log("📂 User upload file:", file.originalname);
+      const imageBytes = fs.readFileSync(file.path);
+      imageData = {
+        imageBytes: imageBytes.toString("base64"),
+        mimeType: file.mimetype,
+      };
+    } else {
+      // ✅ Jika tidak ada gambar → generate dengan Imagen
+      console.log("📷 Tidak ada gambar, generate image via Imagen...");
+      const imagenResponse = await retryRequest(() =>
+        ai.models.generateImages({
+          model: "imagen-4.0-generate-001",
+          prompt,
+          config: {
+            numberOfImages: 1,
+            aspectRatio: aspectRatio || "16:9",
+            sampleImageSize: "1K",
+          },
+        })
+      );
+
+      if (!imagenResponse.generatedImages?.length) {
+        return res.json({ error: "Gagal generate gambar dengan Imagen." });
+      }
+
+      imageData = {
+        imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
+        mimeType: "image/png",
+      };
+      console.log("✅ Fallback image berhasil dibuat via Imagen");
+    }
+
+    console.log("🎬 Kirim request generate video ke Veo...");
+    let operation = await ai.models.generateVideos({
       model: veoModel || "veo-3.0-generate-001",
       prompt,
+      image: imageData,
       config: {
         numberOfVideos: 1,
         aspectRatio: aspectRatio || "16:9",
       },
     });
 
-    let op = operation;
-    while (!op.done) {
+    const operationId = operation.name || operation.operationId || operation.id;
+    console.log("🔍 Operation ID:", operationId);
+
+    while (!operation.done) {
+      console.log("⏳ Menunggu video selesai diproses...");
       await new Promise((r) => setTimeout(r, 8000));
-      op = await ai.operations.getVideosOperation({ operation });
+      operation = await ai.operations.getVideosOperation({ operation });
     }
 
-    if (!op.response?.generatedVideos?.length) {
+    if (!operation.response?.generatedVideos?.length) {
       return res.json({ error: "Gagal membuat video, coba lagi." });
     }
 
-    const videoFile = op.response.generatedVideos[0].video;
+    console.log("✅ Video berhasil di-generate oleh Veo");
+    const videoFile = operation.response.generatedVideos[0].video;
     const fileName = `generated_video_${Date.now()}.mp4`;
     const localPath = path.join(os.tmpdir(), fileName);
 
+    console.log("⬇️ Download video ke lokal tmp:", localPath);
     await ai.files.download({ file: videoFile, downloadPath: localPath });
+
     if (!fs.existsSync(localPath)) {
       return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
     }
 
-    // upload ke Supabase
+    console.log("📤 Upload video ke Supabase...");
     const fileBuffer = fs.readFileSync(localPath);
     const { error: uploadError } = await supabase.storage
       .from("generated-files")
@@ -85,17 +124,19 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         upsert: true,
       });
 
+    // hapus file lokal
     fs.unlinkSync(localPath);
+
     if (uploadError) {
       console.error("❌ Upload error:", uploadError.message);
       return res.json({ error: "Gagal upload ke Supabase" });
     }
 
-    // ambil URL publik dari Supabase
     const { data } = supabase.storage
       .from("generated-files")
       .getPublicUrl(`videos/${fileName}`);
 
+    console.log("✅ Video URL:", data.publicUrl);
     res.json({ videoUrl: data.publicUrl, fileName });
   } catch (err) {
     console.error("❌ ERROR:", err);
@@ -103,14 +144,16 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
   }
 });
 
-// API generate image
+// ====================== API GENERATE IMAGE ======================
 router.post("/generate-image", async (req, res) => {
   try {
     const { apiKey, prompt, imagenModel, aspectRatio, outputResolution } = req.body;
     if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
     if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
 
+    console.log("🚀 Mulai generate image...");
     const ai = new GoogleGenAI({ apiKey });
+
     const imagenResponse = await retryRequest(() =>
       ai.models.generateImages({
         model: imagenModel || "imagen-4.0-generate-001",
@@ -134,6 +177,7 @@ router.post("/generate-image", async (req, res) => {
     const fileName = `generated_image_${Date.now()}.${extension}`;
     const buffer = Buffer.from(base64Data, "base64");
 
+    console.log("📤 Upload image ke Supabase...");
     const { error: uploadError } = await supabase.storage
       .from("generated-files")
       .upload(`images/${fileName}`, buffer, {
@@ -150,6 +194,7 @@ router.post("/generate-image", async (req, res) => {
       .from("generated-files")
       .getPublicUrl(`images/${fileName}`);
 
+    console.log("✅ Image URL:", data.publicUrl);
     res.json({ imageUrl: data.publicUrl, fileName });
   } catch (err) {
     console.error("❌ ERROR:", err);
@@ -157,7 +202,7 @@ router.post("/generate-image", async (req, res) => {
   }
 });
 
-// admin login
+// ====================== ADMIN ENDPOINTS ======================
 router.post("/admin/login", express.json(), (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -166,7 +211,6 @@ router.post("/admin/login", express.json(), (req, res) => {
   return res.status(401).json({ error: "Username/password salah" });
 });
 
-// middleware cek token
 function authMiddleware(req, res, next) {
   const token = req.headers["authorization"];
   if (!token || token !== `Bearer ${ADMIN_TOKEN}`) {
@@ -175,7 +219,6 @@ function authMiddleware(req, res, next) {
   next();
 }
 
-// list files
 router.get("/admin/files", authMiddleware, async (req, res) => {
   try {
     const files = [];
@@ -191,7 +234,6 @@ router.get("/admin/files", authMiddleware, async (req, res) => {
   }
 });
 
-// preview file → redirect ke URL Supabase
 router.get("/admin/preview/:type/:filename", authMiddleware, async (req, res) => {
   const { type, filename } = req.params;
   const { data } = supabase.storage
@@ -200,7 +242,6 @@ router.get("/admin/preview/:type/:filename", authMiddleware, async (req, res) =>
   return res.redirect(data.publicUrl);
 });
 
-// delete file
 router.delete("/admin/delete/:type/:filename", authMiddleware, async (req, res) => {
   const { type, filename } = req.params;
   const { error } = await supabase.storage
