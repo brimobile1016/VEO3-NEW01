@@ -220,62 +220,68 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
 // ✅ API generate image
 router.post("/generate-image", upload.single("image"), async (req, res) => {
-  try {
-    const { apiKey, prompt, imagenModel, aspectRatio, outputResolution } = req.body;
-    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
-    if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
+  try {
+    const { apiKey, prompt, imagenModel, aspectRatio, outputResolution } = req.body;
+    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
+    if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
 
-    const ai = new GoogleGenAI({ apiKey });
-    const imagenResponse = await retryRequest(() =>
-      ai.models.generateImages({
-        model: imagenModel || "imagen-4.0-generate-001",
-        prompt,
-        config: {
-          numberOfImages: 1,
-          aspectRatio: aspectRatio || "16:9",
-          sampleImageSize: outputResolution || "1K",
-        },
-      })
-    );
-      console.log("🔍 Imagen Response:", imagenResponse);
+    const ai = new GoogleGenAI({ apiKey });
+    const imagenResponse = await retryRequest(() =>
+      ai.models.generateImages({
+        model: imagenModel || "imagen-4.0-generate-001",
+        prompt,
+        config: {
+          numberOfImages: 1,
+          aspectRatio: aspectRatio || "16:9",
+          sampleImageSize: outputResolution || "1K",
+        },
+      })
+    );
 
-    if (!imagenResponse.generatedImages?.length) {
-      return res.json({ error: "Gagal membuat gambar." });
-    }
+    console.log("🔍 Imagen Response:", JSON.stringify(imagenResponse, null, 2));
 
-    const image = imagenResponse.generatedImages[0].image;
-    const base64Data = image.imageBytes;
-    const mimeType = image.mimeType;
-    const extension = mimeType.split("/")[1];
-    const fileName = `generated_image_${Date.now()}.${extension}`;
-    const buffer = Buffer.from(base64Data, "base64");
+    if (!imagenResponse.generatedImages?.length) {
+      return res.json({ error: "Gagal membuat gambar." });
+    }
 
-    // ✅ Upload ke Supabase
-    const { error: uploadError } = await supabase.storage
-      .from("generated-files")
-      .upload(`images/${fileName}`, buffer, {
-        contentType: mimeType,
-        upsert: true,
-      });
+    // ✅ ambil object image dengan benar
+    const imageObj = imagenResponse.generatedImages[0].image;
+    if (!imageObj?.imageBytes) {
+      return res.json({ error: "ImageBytes kosong dari response AI." });
+    }
 
-    if (uploadError) {
-      console.error("❌ Upload error:", uploadError.message);
-      return res.json({ error: "Gagal upload ke Supabase" });
-    }
+    const base64Data = imageObj.imageBytes;
+    const mimeType = imageObj.mimeType || "image/png";
+    const extension = mimeType.split("/")[1] || "png";
+    const fileName = `generated_image_${Date.now()}.${extension}`;
+    const buffer = Buffer.from(base64Data, "base64");
 
-    // ✅ Ambil public URL
-    const { data } = supabase.storage
-  .from("generated-files")
-  .getPublicUrl(`images/${fileName}`);
+    // ✅ Upload ke Supabase
+    const { error: uploadError } = await supabase.storage
+      .from("generated-files")
+      .upload(`images/${fileName}`, buffer, {
+        contentType: mimeType,
+        upsert: true,
+      });
 
-res.json({ imageUrl: data.publicUrl });
-  } catch (err) {
-    console.error("❌ ERROR:", err);
-if (err.message && err.message.includes("API key not valid")) {
-      return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
-    }
-    return res.json({ error: "Terjadi kesalahan saat membuat gambar." });
-  }
+    if (uploadError) {
+      console.error("❌ Upload error:", uploadError.message);
+      return res.json({ error: "Gagal upload ke Supabase" });
+    }
+
+    // ✅ Ambil public URL
+    const { data: publicUrl } = supabase.storage
+      .from("generated-files")
+      .getPublicUrl(`images/${fileName}`);
+
+    res.json({ imageUrl: publicUrl.publicUrl, fileName });
+  } catch (err) {
+    console.error("❌ ERROR:", err);
+    if (err.message && err.message.includes("API key not valid")) {
+      return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
+    }
+    return res.json({ error: "Terjadi kesalahan saat membuat gambar." });
+  }
 });
 
 // List file
