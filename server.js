@@ -2,12 +2,9 @@ import express from 'express'
 import cors from 'cors'
 import secure from 'ssl-express-www'
 import main from './routes/main.js'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from './lib/supabase.js'
 
-// --- Supabase setup ---
-const supabaseUrl = 'https://nhjbbesruvuwsvdhhbkn.supabase.co'
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'ISI_KEY_DISINI' // ⚠️ pakai service_role key
-const supabase = createClient(supabaseUrl, supabaseKey)
+const PORT = process.env.PORT || 7002 || 5000 || 3000
 
 async function ensureBucketExists(bucketName = "generated-files") {
   try {
@@ -21,7 +18,7 @@ async function ensureBucketExists(bucketName = "generated-files") {
     if (!exists) {
       console.log(`⚡ Bucket "${bucketName}" belum ada, membuat...`)
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true, // langsung public biar gampang akses
+        public: true,
       })
       if (createError) {
         console.error("❌ Gagal membuat bucket:", createError.message)
@@ -35,9 +32,6 @@ async function ensureBucketExists(bucketName = "generated-files") {
     console.error("❌ ERROR ensureBucketExists:", err.message)
   }
 }
-// --- End Supabase setup ---
-
-const PORT = process.env.PORT || 7002 || 5000 || 3000
 
 const app = express()
 app.enable('trust proxy')
@@ -48,7 +42,6 @@ app.use(express.static("views"))
 app.use(express.static("uploads"))
 app.use('/', main)
 
-// Pastikan bucket ada sebelum server listen
 async function startServer() {
   await ensureBucketExists("generated-files")
   app.listen(PORT, () => {
