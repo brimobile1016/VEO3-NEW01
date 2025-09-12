@@ -94,6 +94,17 @@ async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
   }
 }
 
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "1234";
+
+// Middleware untuk cek token
+function authMiddleware(req, res, next) {
+  const token = req.headers["authorization"];
+  if (!token || token !== `Bearer ${ADMIN_TOKEN}`) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
 // ✅ API generate video
 router.post("/generate-video", upload.single("image"), async (req, res) => {
   try {
@@ -194,32 +205,59 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
   }
 });
 
-// ✅ Daftar semua file di /tmp
-router.get("/admin/files", (req, res) => {
-  const files = {
-    videos: fs.readdirSync(outputDirVideo).map(f => ({ type: "video", name: f })),
-    images: fs.readdirSync(outputDirImage).map(f => ({ type: "image", name: f })),
-  };
-  res.json(files);
+// List file
+router.get("/admin/files", authMiddleware, (req, res) => {
+  const files = [];
+
+  // cek folder /tmp/images
+  const imgDir = path.join("/tmp", "images");
+  if (fs.existsSync(imgDir)) {
+    fs.readdirSync(imgDir).forEach(f => {
+      files.push({ type: "image", name: f });
+    });
+  }
+
+  // cek folder /tmp/videos
+  const vidDir = path.join("/tmp", "videos");
+  if (fs.existsSync(vidDir)) {
+    fs.readdirSync(vidDir).forEach(f => {
+      files.push({ type: "video", name: f });
+    });
+  }
+
+  res.json({ files });
 });
 
-// ✅ Hapus file tertentu
-router.delete("/admin/delete/:type/:filename", (req, res) => {
+// Serve file (lihat preview)
+router.get("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
   const { type, filename } = req.params;
-  let baseDir;
+  const dir = type === "video" ? "videos" : "images";
+  const filePath = path.join("/tmp", dir, filename);
 
-  if (type === "video") baseDir = outputDirVideo;
-  else if (type === "image") baseDir = outputDirImage;
-  else return res.status(400).json({ error: "Type harus image atau video" });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File tidak ditemukan");
+  }
 
-  const filePath = path.join(baseDir, filename);
+  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Disposition", "inline");
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// Delete file
+router.delete("/admin/tmp/:type/:filename", authMiddleware, (req, res) => {
+  const { type, filename } = req.params;
+  const dir = type === "video" ? "videos" : "images";
+  const filePath = path.join("/tmp", dir, filename);
+
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "File tidak ditemukan" });
   }
 
   fs.unlinkSync(filePath);
-  res.json({ success: true, message: `File ${filename} berhasil dihapus` });
+  res.json({ success: true, message: `File ${filename} dihapus.` });
 });
+
 
 
 export default router;
