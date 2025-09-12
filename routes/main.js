@@ -263,11 +263,11 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
     }
 
     // ✅ Ambil public URL
-    const { data: publicUrl } = supabase.storage
-      .from("generated-files")
-      .getPublicUrl(`images/${fileName}`);
+    const { data } = supabase.storage
+  .from("generated-files")
+  .getPublicUrl(`images/${fileName}`);
 
-    res.json({ imageUrl: publicUrl.publicUrl });
+res.json({ imageUrl: data.publicUrl });
   } catch (err) {
     console.error("❌ ERROR:", err);
 if (err.message && err.message.includes("API key not valid")) {
