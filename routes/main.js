@@ -98,15 +98,6 @@ const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "1234";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 
-// Middleware untuk cek token
-function authMiddleware(req, res, next) {
-  const token = req.headers["authorization"];
-  if (!token || token !== `Bearer ${ADMIN_TOKEN}`) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-  next();
-}
-
 // ✅ API generate video
 router.post("/generate-video", upload.single("image"), async (req, res) => {
   try {
