@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - File Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #00d2d3 0%, #54a0ff 100%);
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .table-row {
+            transition: all 0.3s ease;
+        }
+        
+        .table-row:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <!-- Login Form -->
+    <div id="loginForm" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-effect rounded-2xl p-8 w-full max-w-md shadow-2xl fade-in">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-shield-alt text-2xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+                <p class="text-white text-opacity-80">Masuk untuk mengelola file sistem</p>
+            </div>
+            
+            <form onsubmit="loginAdmin(event)" class="space-y-6">
+                <div class="space-y-2">
+                    <label class="text-white text-sm font-medium">Username</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-white text-opacity-60"></i>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            class="w-full pl-10 pr-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 transition-all"
+                            placeholder="Masukkan username"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-white text-sm font-medium">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-white text-opacity-60"></i>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="w-full pl-10 pr-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 transition-all"
+                            placeholder="Masukkan password"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    id="loginBtn"
+                    class="w-full btn-primary text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center space-x-2 hover:shadow-lg transition-all"
+                >
+                    <span id="loginBtnText">Masuk ke Dashboard</span>
+                    <div id="loginSpinner" class="loading-spinner hidden"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- File Manager -->
+    <div id="fileManager" class="min-h-screen p-6 hidden">
+        <!-- Header -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 shadow-xl">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-2">File Manager</h1>
+                    <p class="text-white text-opacity-80">Kelola file gambar dan video sistem</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button 
+                        onclick="refreshFiles()" 
+                        id="refreshBtn"
+                        class="btn-success text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 hover:shadow-lg transition-all"
+                    >
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button 
+                        onclick="logoutAdmin()" 
+                        class="btn-danger text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 hover:shadow-lg transition-all"
+                    >
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Keluar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Table -->
+        <div class="glass-effect rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-6 border-b border-white border-opacity-20">
+                <h2 class="text-xl font-semibold text-white flex items-center">
+                    <i class="fas fa-folder-open mr-3"></i>
+                    Daftar File
+                </h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-white bg-opacity-10">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-white font-semibold">
+                                <i class="fas fa-tag mr-2"></i>Tipe
+                            </th>
+                            <th class="px-6 py-4 text-left text-white font-semibold">
+                                <i class="fas fa-file mr-2"></i>Nama File
+                            </th>
+                            <th class="px-6 py-4 text-center text-white font-semibold">
+                                <i class="fas fa-cogs mr-2"></i>Aksi
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="file-list" class="divide-y divide-white divide-opacity-10">
+                        <!-- Files will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="tableLoading" class="hidden p-12 text-center">
+                <div class="loading-spinner mx-auto mb-4" style="width: 40px; height: 40px; border-width: 4px;"></div>
+                <p class="text-white text-opacity-80">Memuat daftar file...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden p-12 text-center">
+                <i class="fas fa-folder-open text-6xl text-white text-opacity-30 mb-4"></i>
+                <p class="text-white text-opacity-80 text-lg">Tidak ada file ditemukan</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4 z-50">
+        <div class="glass-effect rounded-2xl max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-white border-opacity-20 flex justify-between items-center">
+                <h3 class="text-xl font-semibold text-white">Preview File</h3>
+                <button 
+                    onclick="closeModal()" 
+                    class="text-white hover:text-red-300 transition-colors"
+                >
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div id="previewContainer" class="p-6 max-h-[70vh] overflow-auto">
+                <!-- Preview content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced login function with loading state
+        async function loginAdmin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const loginBtn = document.getElementById("loginBtn");
+            const loginBtnText = document.getElementById("loginBtnText");
+            const loginSpinner = document.getElementById("loginSpinner");
+
+            // Show loading state
+            loginBtn.disabled = true;
+            loginBtnText.textContent = "Memproses...";
+            loginSpinner.classList.remove("hidden");
+
+            try {
+                const res = await fetch("/admin/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (data.token) {
+                    localStorage.setItem("adminToken", data.token);
+                    
+                    // Success animation
+                    loginBtnText.textContent = "Berhasil!";
+                    loginSpinner.classList.add("hidden");
+                    
+                    setTimeout(() => {
+                        document.getElementById("loginForm").style.display = "none";
+                        document.getElementById("fileManager").style.display = "block";
+                        loadFiles();
+                    }, 1000);
+                } else {
+                    throw new Error(data.error || "Login gagal");
+                }
+            } catch (error) {
+                // Error state
+                loginBtnText.textContent = "Login Gagal";
+                loginSpinner.classList.add("hidden");
+                
+                // Show error notification
+                showNotification("Login gagal: " + error.message, "error");
+                
+                setTimeout(() => {
+                    loginBtn.disabled = false;
+                    loginBtnText.textContent = "Masuk ke Dashboard";
+                }, 2000);
+            }
+        }
+
+        function logoutAdmin() {
+            if (confirm("Yakin ingin keluar dari dashboard?")) {
+                localStorage.removeItem("adminToken");
+                document.getElementById("loginForm").style.display = "block";
+                document.getElementById("fileManager").style.display = "none";
+                showNotification("Berhasil keluar dari sistem", "success");
+            }
+        }
+
+        async function loadFiles() {
+            const token = localStorage.getItem("adminToken");
+            if (!token) {
+                showNotification("Sesi telah berakhir, silakan login kembali", "error");
+                logoutAdmin();
+                return;
+            }
+
+            const tableLoading = document.getElementById("tableLoading");
+            const fileList = document.getElementById("file-list");
+            const emptyState = document.getElementById("emptyState");
+
+            // Show loading state
+            tableLoading.classList.remove("hidden");
+            fileList.innerHTML = "";
+            emptyState.classList.add("hidden");
+
+            try {
+                const res = await fetch("/admin/files", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                
+                // Hide loading
+                tableLoading.classList.add("hidden");
+
+                if (data.files && data.files.length > 0) {
+                    data.files.forEach((file, index) => {
+                        const tr = document.createElement("tr");
+                        tr.className = "table-row";
+                        tr.style.animationDelay = `${index * 0.1}s`;
+                        
+                        const typeIcon = file.type === 'image' ? 'fa-image' : 'fa-video';
+                        const typeColor = file.type === 'image' ? 'text-green-400' : 'text-blue-400';
+                        
+                        tr.innerHTML = `
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <i class="fas ${typeIcon} ${typeColor} mr-3"></i>
+                                    <span class="text-white capitalize font-medium">${file.type}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-white font-mono text-sm">${file.name}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex justify-center space-x-3">
+                                    <button 
+                                        onclick="previewFile('${file.type}', '${file.name}')" 
+                                        class="btn-success text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:shadow-lg transition-all"
+                                        id="viewBtn-${index}"
+                                    >
+                                        <i class="fas fa-eye"></i>
+                                        <span class="view-btn-text">Lihat</span>
+                                    </button>
+                                    <button 
+                                        onclick="deleteFile('${file.type}', '${file.name}')" 
+                                        class="btn-danger text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 hover:shadow-lg transition-all"
+                                        id="deleteBtn-${index}"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                        <span class="delete-btn-text">Hapus</span>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        fileList.appendChild(tr);
+                    });
+                } else {
+                    emptyState.classList.remove("hidden");
+                }
+            } catch (error) {
+                tableLoading.classList.add("hidden");
+                showNotification("Gagal memuat daftar file: " + error.message, "error");
+            }
+        }
+
+        async function deleteFile(type, filename) {
+            if (!confirm(`Yakin ingin menghapus file "${filename}"?\n\nTindakan ini tidak dapat dibatalkan.`)) {
+                return;
+            }
+
+            const token = localStorage.getItem("adminToken");
+            const deleteBtn = event.target.closest('button');
+            const deleteBtnText = deleteBtn.querySelector('.delete-btn-text');
+            const originalText = deleteBtnText.textContent;
+
+            // Show loading state
+            deleteBtn.disabled = true;
+            deleteBtnText.textContent = "Menghapus...";
+
+            try {
+                const res = await fetch(`/admin/delete/${type}/${filename}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                const result = await res.json();
+                
+                if (res.ok) {
+                    showNotification(`File "${filename}" berhasil dihapus`, "success");
+                    loadFiles(); // Reload the file list
+                } else {
+                    throw new Error(result.error || "Gagal menghapus file");
+                }
+            } catch (error) {
+                showNotification("Gagal menghapus file: " + error.message, "error");
+                deleteBtn.disabled = false;
+                deleteBtnText.textContent = originalText;
+            }
+        }
+
+        async function previewFile(type, filename) {
+            const token = localStorage.getItem("adminToken");
+            const viewBtn = event.target.closest('button');
+            const viewBtnText = viewBtn.querySelector('.view-btn-text');
+            const originalText = viewBtnText.textContent;
+
+            // Show loading state
+            viewBtn.disabled = true;
+            viewBtnText.textContent = "Memuat...";
+
+            try {
+                const res = await fetch(`/admin/preview/${type}/${filename}`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: Gagal memuat file`);
+                }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const container = document.getElementById("previewContainer");
+                
+                container.innerHTML = "";
+
+                if (type === "image") {
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <img src="${url}" alt="${filename}" class="max-w-full max-h-full rounded-lg shadow-lg">
+                            <p class="text-white text-opacity-80 mt-4 font-mono text-sm">${filename}</p>
+                        </div>
+                    `;
+                } else if (type === "video") {
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <video controls class="max-w-full max-h-full rounded-lg shadow-lg">
+                                <source src="${url}" type="video/mp4">
+                                Browser Anda tidak mendukung video HTML5.
+                            </video>
+                            <p class="text-white text-opacity-80 mt-4 font-mono text-sm">${filename}</p>
+                        </div>
+                    `;
+                }
+
+                document.getElementById("previewModal").style.display = "flex";
+                
+                // Reset button state
+                viewBtn.disabled = false;
+                viewBtnText.textContent = originalText;
+                
+            } catch (error) {
+                showNotification("Gagal memuat preview: " + error.message, "error");
+                viewBtn.disabled = false;
+                viewBtnText.textContent = originalText;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById("previewModal").style.display = "none";
+            
+            // Clean up object URLs to prevent memory leaks
+            const container = document.getElementById("previewContainer");
+            const media = container.querySelector('img, video');
+            if (media && media.src.startsWith('blob:')) {
+                URL.revokeObjectURL(media.src);
+            }
+        }
+
+        async function refreshFiles() {
+            const refreshBtn = document.getElementById("refreshBtn");
+            const refreshIcon = document.getElementById("refreshIcon");
+            
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add("fa-spin");
+            
+            await loadFiles();
+            
+            setTimeout(() => {
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove("fa-spin");
+                showNotification("Daftar file berhasil diperbarui", "success");
+            }, 1000);
+        }
+
+        function showNotification(message, type = "info") {
+            const notification = document.createElement("div");
+            const bgColor = type === "error" ? "bg-red-500" : type === "success" ? "bg-green-500" : "bg-blue-500";
+            const icon = type === "error" ? "fa-exclamation-circle" : type === "success" ? "fa-check-circle" : "fa-info-circle";
+            
+            notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center space-x-3 fade-in`;
+            notification.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = "0";
+                notification.style.transform = "translateX(100%)";
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        // Auto login check with smooth transition
+        window.onload = () => {
+            const token = localStorage.getItem("adminToken");
+            if (token) {
+                document.getElementById("loginForm").style.display = "none";
+                document.getElementById("fileManager").style.display = "block";
+                loadFiles();
+            }
+        };
+
+        // Close modal when clicking outside
+        document.getElementById("previewModal").addEventListener("click", (e) => {
+            if (e.target.id === "previewModal") {
+                closeModal();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                closeModal();
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97defc7aa2def543',t:'MTc1NzY3NTcxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
