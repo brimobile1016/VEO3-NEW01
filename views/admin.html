@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - File Manager</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    button { padding: 6px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+  <p>Kelola file sementara (images & videos) di folder <code>/tmp</code>.</p>
+  
+  <h2>Daftar File</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Filename</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="file-list"></tbody>
+  </table>
+
+  <script>
+    async function loadFiles() {
+      const res = await fetch("/admin/files");
+      const data = await res.json();
+      const tbody = document.getElementById("file-list");
+      tbody.innerHTML = "";
+
+      [...data.images, ...data.videos].forEach(file => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${file.type}</td>
+          <td>${file.name}</td>
+          <td><button onclick="deleteFile('${file.type}', '${file.name}')">Hapus</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function deleteFile(type, filename) {
+      if (!confirm(`Yakin ingin menghapus ${filename}?`)) return;
+      const res = await fetch(`/admin/delete/${type}/${filename}`, { method: "DELETE" });
+      const result = await res.json();
+      alert(result.message || "File dihapus");
+      loadFiles();
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>
