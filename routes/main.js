@@ -94,6 +94,7 @@ router.get("/preview/:type/:filename", (req, res) => {
 
   const mimeType = mime.lookup(filePath) || "application/octet-stream";
   res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Length", fileSize);
   res.setHeader("Content-Disposition", "inline");
   fs.createReadStream(filePath).pipe(res);
 });
