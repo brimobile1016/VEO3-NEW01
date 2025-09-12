@@ -17,12 +17,14 @@ const __dirname = path.dirname(__filename);
 
 
 // ✅ Serve file statis
-// Rute untuk file root / akan memanggil view/index.html
 router.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "view", "index.html"));
+//  res.sendFile(path.join(__dirname, "views", "index.html"));
+  res.sendFile(path.join(__dirname, "..", "views", "index.html"));
 });
-router.get("/ayo", (req, res) => {
-  res.sendFile(path.join(__dirname, "view", "ayo.html"));
+
+router.get("/admin", (req, res) => {
+//  res.sendFile(path.join(__dirname, "views", "index.html"));
+  res.sendFile(path.join(__dirname, "..", "views", "admin.html"));
 });
 
 async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
