@@ -715,6 +715,7 @@
                 });
 
                 const data = await response.json();
+                console.log("Server response:", data);
                 loading.style.display = "none";
 
                 if (data.error) {
@@ -1070,5 +1071,6 @@ imageApiKeyInput.readOnly = locked;
 
 </body>
 </html>
+
 
 
