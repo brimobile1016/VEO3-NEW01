@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 import { supabase } from "./supabase.js";
+import fetch from "node-fetch";
 
 
 const router = express();
@@ -129,7 +130,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     // Polling sampai selesai
     while (!operation.done) {
       console.log("⏳ [DEBUG] Menunggu proses video...");
-      await new Promise((r) => setTimeout(r, 5000)); // polling lebih cepat untuk debug
+      await new Promise((r) => setTimeout(r, 5000));
       operation = await ai.operations.getVideosOperation({ operation });
       console.log("🔁 [DEBUG] Operation update:", operation.done ? "Selesai" : "Belum selesai");
     }
@@ -144,8 +145,8 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const videoFile = operation.response.generatedVideos[0].video;
     console.log("[DEBUG] Video file object:", videoFile);
 
-    if (!videoFile) {
-      console.log("❌ [DEBUG] Video file kosong");
+    if (!videoFile?.uri) {
+      console.log("❌ [DEBUG] Video file URI kosong");
       return res.json({ error: "Video file kosong, gagal download." });
     }
 
@@ -153,17 +154,21 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const fileName = `generated_video_${randomNumber}.mp4`;
     const localPath = path.join(os.tmpdir(), fileName);
 
-    console.log("💾 [DEBUG] Download video ke lokal:", localPath);
-    try {
-      await ai.files.download({ file: videoFile, downloadPath: localPath });
-    } catch (err) {
-      console.error("❌ [DEBUG] Error saat download video:", err);
-      return res.json({ error: "Gagal download video dari Veo" });
-    }
+    console.log("💾 [DEBUG] Download video dari URI ke lokal:", localPath);
 
-    if (!fs.existsSync(localPath)) {
-      console.log("❌ [DEBUG] File video tidak ada setelah download");
-      return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
+    try {
+      const response = await fetch(videoFile.uri);
+      if (!response.ok) {
+        console.log("❌ [DEBUG] Gagal fetch video:", response.statusText);
+        return res.json({ error: "Gagal download video dari Veo" });
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      fs.writeFileSync(localPath, Buffer.from(arrayBuffer));
+      console.log("✅ [DEBUG] Video berhasil didownload ke lokal:", localPath);
+    } catch (err) {
+      console.error("❌ [DEBUG] Error saat fetch video:", err);
+      return res.json({ error: "Gagal download video dari Veo" });
     }
 
     console.log("📤 [DEBUG] Membaca file video untuk upload ke Supabase...");
