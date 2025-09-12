@@ -775,6 +775,7 @@
                             </div>
                         </div>
                     `;
+                    getVideoSize(data.videoUrl);
                 }
                 
                 result.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1065,10 +1066,9 @@ imageApiKeyInput.readOnly = locked;
     console.error(error);
   }
 }
-
-    getVideoSize(data.videoUrl);
   </script>
 
 </body>
 </html>
+
 
