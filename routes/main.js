@@ -1,3 +1,4 @@
+// routes/main.js
 import express from "express";
 import multer from "multer";
 import os from "os";
@@ -13,6 +14,10 @@ const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ✅ Tambahkan body parser
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
 
 // helper retry
 async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
@@ -34,12 +39,11 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 // ====================== API GENERATE VIDEO ======================
 router.post("/generate-video", upload.single("image"), async (req, res) => {
   try {
-    const { apiKey, prompt, aspectRatio, veoModel } = req.body;
-    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
+    console.log("📦 BODY:", req.body);
+    console.log("📂 FILE:", req.file);
 
-    console.log("🚀 Mulai generate video...");
-    console.log("🔑 API Key:", apiKey ? "OK (ada)" : "❌ kosong");
-    console.log("📝 Prompt:", prompt);
+    const { apiKey, prompt, aspectRatio, veoModel } = req.body || {};
+    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
 
     const ai = new GoogleGenAI({ apiKey });
     let imageData = null;
@@ -124,7 +128,6 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         upsert: true,
       });
 
-    // hapus file lokal
     fs.unlinkSync(localPath);
 
     if (uploadError) {
@@ -139,7 +142,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     console.log("✅ Video URL:", data.publicUrl);
     res.json({ videoUrl: data.publicUrl, fileName });
   } catch (err) {
-    console.error("❌ ERROR:", err);
+    console.error("❌ ERROR generate-video:", err);
     return res.json({ error: "Terjadi kesalahan saat membuat video." });
   }
 });
@@ -197,7 +200,7 @@ router.post("/generate-image", async (req, res) => {
     console.log("✅ Image URL:", data.publicUrl);
     res.json({ imageUrl: data.publicUrl, fileName });
   } catch (err) {
-    console.error("❌ ERROR:", err);
+    console.error("❌ ERROR generate-image:", err);
     return res.json({ error: "Terjadi kesalahan saat membuat gambar." });
   }
 });
