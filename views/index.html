@@ -748,7 +748,7 @@
                             <div class="bg-black/50 rounded-2xl p-6 mb-8">
                                 
                                 <video controls muted class="w-full rounded-xl shadow-2xl">
-    <source src="/public/video/${data.fileName}" type="video/mp4">
+    <source src="${data.videoUrl}" type="video/mp4">
     Browser Anda tidak mendukung pemutar video.
   </video>
                             </div>
@@ -1066,8 +1066,9 @@ imageApiKeyInput.readOnly = locked;
   }
 }
 
-    getVideoSize(`/public/video/${data.fileName}`);
+    getVideoSize(data.videoUrl);
   </script>
 
 </body>
 </html>
+
