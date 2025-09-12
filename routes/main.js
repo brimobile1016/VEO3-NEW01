@@ -190,4 +190,32 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
   }
 });
 
+// ✅ Daftar semua file di /tmp
+router.get("/admin/files", (req, res) => {
+  const files = {
+    videos: fs.readdirSync(outputDirVideo).map(f => ({ type: "video", name: f })),
+    images: fs.readdirSync(outputDirImage).map(f => ({ type: "image", name: f })),
+  };
+  res.json(files);
+});
+
+// ✅ Hapus file tertentu
+router.delete("/admin/delete/:type/:filename", (req, res) => {
+  const { type, filename } = req.params;
+  let baseDir;
+
+  if (type === "video") baseDir = outputDirVideo;
+  else if (type === "image") baseDir = outputDirImage;
+  else return res.status(400).json({ error: "Type harus image atau video" });
+
+  const filePath = path.join(baseDir, filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File tidak ditemukan" });
+  }
+
+  fs.unlinkSync(filePath);
+  res.json({ success: true, message: `File ${filename} berhasil dihapus` });
+});
+
+
 export default router;
