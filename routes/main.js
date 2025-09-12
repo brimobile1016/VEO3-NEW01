@@ -7,16 +7,8 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 import mime from "mime-types";
-import { createClient } from '@supabase/supabase-js'
-
-// --- AWAL MODIFIKASI KODE ANDA ---
-// PERINGATAN: MENEMPELKAN KUNCI LANGSUNG SANGAT TIDAK AMAN!
-// Kunci ini akan terlihat oleh semua orang yang bisa melihat kode Anda.
-// Sangat disarankan untuk menggunakan variabel lingkungan.
-const supabaseUrl = 'https://nhjbbesruvuwsvdhhbkn.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oamJiZXNydXZ1d3N2ZGhoYmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODExMjMsImV4cCI6MjA3MzI1NzEyM30.-A3vEup-fFyH7LPS8zcdlL_MFBq7me1tnjY0UDKW6mY';
-const supabase = createClient(supabaseUrl, supabaseKey);
-// --- AKHIR MODIFIKASI KODE ANDA ---
+import { createClient } from '@supabase/supabase-js';
+import { supabase } from "../lib/supabase.js";
 
 const router = express.Router();
 const upload = multer({
