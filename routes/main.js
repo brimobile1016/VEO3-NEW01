@@ -295,48 +295,84 @@ function authMiddleware(req, res, next) {
   next();
 }
 
-// ✅ List file
-router.get("/admin/files", authMiddleware, (req, res) => {
-  const files = [];
+// ✅ List file dari Supabase
+router.get("/admin/files", authMiddleware, async (req, res) => {
+  try {
+    const files = [];
 
-  if (fs.existsSync(outputDirImage)) {
-    fs.readdirSync(outputDirImage).forEach(f => {
-      files.push({ type: "image", name: f });
-    });
-  }
-  if (fs.existsSync(outputDirVideo)) {
-    fs.readdirSync(outputDirVideo).forEach(f => {
-      files.push({ type: "video", name: f });
-    });
-  }
+    // List images
+    const { data: imageFiles, error: imageError } = await supabase
+      .storage
+      .from("generated-files")
+      .list("images", { limit: 100 });
 
-  res.json({ files });
+    if (imageError) {
+      console.error("❌ Supabase list images error:", imageError.message);
+    } else {
+      imageFiles.forEach(f => files.push({ type: "image", name: f.name }));
+    }
+
+    // List videos
+    const { data: videoFiles, error: videoError } = await supabase
+      .storage
+      .from("generated-files")
+      .list("videos", { limit: 100 });
+
+    if (videoError) {
+      console.error("❌ Supabase list videos error:", videoError.message);
+    } else {
+      videoFiles.forEach(f => files.push({ type: "video", name: f.name }));
+    }
+
+    res.json({ files });
+  } catch (err) {
+    console.error("❌ ERROR list files:", err);
+    res.status(500).json({ error: "Gagal mengambil daftar file dari Supabase" });
+  }
 });
 
-// ✅ Preview file (image/video)
-router.get("/admin/preview/:type/:filename", authMiddleware, (req, res) => {
-  const { type, filename } = req.params;
-  const dir = type === "video" ? outputDirVideo : outputDirImage;
-  const filePath = path.join(dir, filename);
+// ✅ Preview file (ambil public URL dari Supabase)
+router.get("/admin/preview/:type/:filename", authMiddleware, async (req, res) => {
+  try {
+    const { type, filename } = req.params;
+    const { data, error } = supabase
+      .storage
+      .from("generated-files")
+      .getPublicUrl(`${type}s/${filename}`);
 
-  if (!fs.existsSync(filePath)) return res.status(404).send("File tidak ditemukan");
+    if (error) {
+      console.error("❌ Supabase preview error:", error.message);
+      return res.status(404).json({ error: "File tidak ditemukan di Supabase" });
+    }
 
-  const mimeType = mime.lookup(filePath) || "application/octet-stream";
-  res.setHeader("Content-Type", mimeType);
-  res.setHeader("Content-Disposition", "inline");
-  fs.createReadStream(filePath).pipe(res);
+    // Redirect langsung ke URL publik
+    return res.redirect(data.publicUrl);
+  } catch (err) {
+    console.error("❌ ERROR preview file:", err);
+    res.status(500).json({ error: "Gagal preview file dari Supabase" });
+  }
 });
 
-// ✅ Delete file
-router.delete("/admin/delete/:type/:filename", authMiddleware, (req, res) => {
-  const { type, filename } = req.params;
-  const dir = type === "video" ? outputDirVideo : outputDirImage;
-  const filePath = path.join(dir, filename);
+// ✅ Delete file di Supabase
+router.delete("/admin/delete/:type/:filename", authMiddleware, async (req, res) => {
+  try {
+    const { type, filename } = req.params;
 
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
+    const { error } = await supabase
+      .storage
+      .from("generated-files")
+      .remove([`${type}s/${filename}`]);
 
-  fs.unlinkSync(filePath);
-  res.json({ success: true, message: `File ${filename} dihapus.` });
+    if (error) {
+      console.error("❌ Supabase delete error:", error.message);
+      return res.status(404).json({ error: "File tidak ditemukan atau gagal dihapus" });
+    }
+
+    res.json({ success: true, message: `File ${filename} dihapus dari Supabase.` });
+  } catch (err) {
+    console.error("❌ ERROR delete file:", err);
+    res.status(500).json({ error: "Gagal menghapus file dari Supabase" });
+  }
 });
 
 export default router;
