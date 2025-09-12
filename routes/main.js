@@ -237,6 +237,7 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
         },
       })
     );
+      console.log("🔍 Imagen Response:", imagenResponse);
 
     if (!imagenResponse.generatedImages?.length) {
       return res.json({ error: "Gagal membuat gambar." });
