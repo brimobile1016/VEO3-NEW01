@@ -69,63 +69,37 @@
   </div>
 
   <script>
-  const ADMIN_TOKEN = "1234"; // atau ambil dari prompt login user
+const ADMIN_TOKEN = localStorage.getItem("ADMIN_TOKEN"); // ambil token setelah login
 
-  async function loadFiles() {
-    const res = await fetch("/admin/files", {
-      headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
-    });
-    const data = await res.json();
-    const tbody = document.getElementById("file-list");
-    tbody.innerHTML = "";
+async function previewFile(type, filename) {
+  const modal = document.getElementById("previewModal");
+  const container = document.getElementById("previewContainer");
+  container.innerHTML = "";
 
-    data.files.forEach(file => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${file.type}</td>
-        <td>${file.name}</td>
-        <td>
-          <button onclick="previewFile('${file.type}', '${file.name}')">Lihat</button>
-          <button onclick="deleteFile('${file.type}', '${file.name}')">Hapus</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+  let fileUrl = `/admin/preview/${type}/${filename}`;
+
+  const res = await fetch(fileUrl, {
+    headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
+  });
+
+  if (!res.ok) {
+    alert("Gagal load file");
+    return;
   }
 
-  async function deleteFile(type, filename) {
-    if (!confirm(`Yakin ingin menghapus ${filename}?`)) return;
-    const res = await fetch(`/admin/tmp/${type}/${filename}`, {
-      method: "DELETE",
-      headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` }
-    });
-    const result = await res.json();
-    alert(result.message || "File dihapus");
-    loadFiles();
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+
+  if (type === "image") {
+    container.innerHTML = `<img src="${url}" alt="${filename}">`;
+  } else if (type === "video") {
+    container.innerHTML = `<video controls src="${url}"></video>`;
   }
 
-  function previewFile(type, filename) {
-    const modal = document.getElementById("previewModal");
-    const container = document.getElementById("previewContainer");
-    container.innerHTML = "";
-
-    const fileUrl = `/admin/tmp/${type}/${filename}`;
-
-    if (type === "image") {
-      container.innerHTML = `<img src="${fileUrl}" alt="${filename}">`;
-    } else if (type === "video") {
-      container.innerHTML = `<video controls src="${fileUrl}"></video>`;
-    }
-
-    modal.style.display = "flex";
-  }
-
-  function closeModal() {
-    document.getElementById("previewModal").style.display = "none";
-  }
-
-  loadFiles();
+  modal.style.display = "flex";
+}
 </script>
+
 
 </body>
 </html>
