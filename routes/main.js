@@ -28,6 +28,10 @@ router.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "views", "index.html"));
 });
 
+router.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "views", "admin.html"));
+});
+
 // ✅ serve video dari /tmp
 router.get("/public/video/:filename", (req, res) => {
   const filePath = path.join(outputDirVideo, req.params.filename);
