@@ -253,7 +253,10 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
     fs.writeFileSync(filePath, imageBuffer);
 
     // ✅ Kembalikan URL gambar yang dapat diakses publik
-    res.json({ imageUrl: `/public/images/${fileName}` });
+//    res.json({ imageUrl: `/public/images/${fileName}` });
+    res.json({
+  imageUrl: `data:image/png;base64,${base64Data}`
+});
 
   } catch (err) {
     console.error("❌ ERROR:", err);
@@ -266,6 +269,7 @@ router.post("/generate-image", upload.single("image"), async (req, res) => {
 
 
 export default router
+
 
 
 
