@@ -91,7 +91,6 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
           },
         })
       );
-
       console.log("[DEBUG] Imagen response:", JSON.stringify(imagenResponse, null, 2));
 
       if (!imagenResponse.generatedImages?.length) {
@@ -107,7 +106,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     }
 
     console.log("🎬 [DEBUG] Generate video dengan Veo 3 dimulai...");
-    let options = {
+    const options = {
       model: veoModel || "veo-3.0-generate-001",
       prompt,
       image: imageData,
@@ -145,24 +144,32 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const videoFile = operation.response.generatedVideos[0].video;
     console.log("[DEBUG] Video file object:", videoFile);
 
-    if (!videoFile) {
-      console.log("❌ [DEBUG] Video file kosong");
-      return res.json({ error: "Video file kosong, gagal download." });
+    if (!videoFile?.uri) {
+      console.log("❌ [DEBUG] Video URI kosong");
+      return res.json({ error: "Video URI kosong, gagal download." });
     }
 
     const randomNumber = Math.floor(10000 + Math.random() * 90000);
     const fileName = `generated_video_${randomNumber}.mp4`;
     const localPath = path.join(os.tmpdir(), fileName);
 
-    console.log("💾 [DEBUG] Download video ke lokal:", localPath);
-    await ai.files.download({ file: videoFile, downloadPath: localPath });
+    // ===== Download video manual dengan fetch + Authorization =====
+    console.log("💾 [DEBUG] Download video dari URI ke lokal:", localPath);
 
-    if (!fs.existsSync(localPath)) {
-      console.log("❌ [DEBUG] File video tidak ada setelah download");
-      return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
+    const response = await fetch(videoFile.uri, {
+      headers: { "Authorization": `Bearer ${apiKey}` }
+    });
+
+    if (!response.ok) {
+      console.log("❌ [DEBUG] Gagal fetch video:", response.statusText);
+      return res.json({ error: "Gagal download video dari Veo" });
     }
-    console.log("✅ [DEBUG] Video berhasil di-download ke lokal:", localPath);
 
+    const arrayBuffer = await response.arrayBuffer();
+    fs.writeFileSync(localPath, Buffer.from(arrayBuffer));
+    console.log("✅ [DEBUG] Video berhasil didownload ke lokal:", localPath);
+
+    // ===== Upload ke Supabase =====
     console.log("📤 [DEBUG] Membaca file video untuk upload ke Supabase...");
     const fileBuffer = fs.readFileSync(localPath);
 
@@ -196,7 +203,6 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     return res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
-
 
 // ✅ API untuk generate gambar (penambahan baru)
 router.post("/generate-image", upload.single("image"), async (req, res) => {
