@@ -1,4 +1,3 @@
-// routes/main.js
 import express from "express";
 import multer from "multer";
 import os from "os";
@@ -14,10 +13,6 @@ const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// ✅ body parser untuk request JSON/URL-encoded biasa
-router.use(express.json());
-router.use(express.urlencoded({ extended: true }));
 
 // helper retry
 async function retryRequest(fn, maxRetries = 3, delayMs = 3000) {
@@ -37,126 +32,117 @@ const ADMIN_PASS = process.env.ADMIN_PASS || "1234";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 
 // ====================== API GENERATE VIDEO ======================
-router.post(
-  "/generate-video",
-  (req, res, next) => {
-    upload.single("image")(req, res, function (err) {
-      if (err) {
-        console.error("❌ Multer error:", err);
-        return res.status(400).json({ error: "Upload error" });
+router.post("/generate-video", upload.single("image"), async (req, res) => {
+  try {
+    console.log("📥 req.body:", req.body);
+    console.log("📂 req.file:", req.file);
+
+    const { apiKey, prompt, aspectRatio, veoModel } = req.body;
+    const file = req.file;
+
+    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
+    if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
+
+    const ai = new GoogleGenAI({ apiKey });
+    let imageData = null;
+
+    if (file) {
+      // ✅ Jika user upload gambar
+      console.log("📂 User upload file:", file.originalname);
+      const imageBytes = fs.readFileSync(file.path);
+      imageData = {
+        imageBytes: imageBytes.toString("base64"),
+        mimeType: file.mimetype,
+      };
+    } else {
+      // ✅ Jika tidak ada gambar → fallback generate pakai Imagen
+      console.log("📷 Tidak ada file upload, generate image via Imagen...");
+      const imagenResponse = await retryRequest(() =>
+        ai.models.generateImages({
+          model: "imagen-4.0-generate-001",
+          prompt,
+          config: {
+            numberOfImages: 1,
+            aspectRatio: aspectRatio || "16:9",
+            sampleImageSize: "1K",
+          },
+        })
+      );
+
+      if (!imagenResponse.generatedImages?.length) {
+        return res.json({ error: "Gagal generate gambar dengan Imagen." });
       }
-      next();
+
+      imageData = {
+        imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
+        mimeType: "image/png",
+      };
+      console.log("✅ Fallback image berhasil dibuat via Imagen");
+    }
+
+    console.log("🎬 Kirim request generate video ke Veo...");
+    let operation = await ai.models.generateVideos({
+      model: veoModel || "veo-3.0-generate-001",
+      prompt,
+      image: imageData,
+      config: {
+        numberOfVideos: 1,
+        aspectRatio: aspectRatio || "16:9",
+      },
     });
-  },
-  async (req, res) => {
-    try {
-      console.log("📥 req.body:", req.body);
-      console.log("📂 req.file:", req.file);
 
-      const { apiKey, prompt, aspectRatio, veoModel } = req.body || {};
-      if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
+    const operationId = operation.name || operation.operationId || operation.id;
+    console.log("🔍 Operation ID:", operationId);
 
-      const ai = new GoogleGenAI({ apiKey });
-      let imageData = null;
+    while (!operation.done) {
+      console.log("⏳ Menunggu video selesai diproses...");
+      await new Promise((r) => setTimeout(r, 8000));
+      operation = await ai.operations.getVideosOperation({ operation });
+    }
 
-      if (req.file) {
-        // ✅ User upload gambar
-        console.log("📂 User upload file:", req.file.originalname);
-        const imageBytes = fs.readFileSync(req.file.path);
-        imageData = {
-          imageBytes: imageBytes.toString("base64"),
-          mimeType: req.file.mimetype,
-        };
-      } else {
-        // ✅ Jika tidak ada gambar → generate pakai Imagen
-        console.log("📷 Tidak ada gambar, generate image via Imagen...");
-        const imagenResponse = await retryRequest(() =>
-          ai.models.generateImages({
-            model: "imagen-4.0-generate-001",
-            prompt,
-            config: {
-              numberOfImages: 1,
-              aspectRatio: aspectRatio || "16:9",
-              sampleImageSize: "1K",
-            },
-          })
-        );
+    if (!operation.response?.generatedVideos?.length) {
+      return res.json({ error: "Gagal membuat video, coba lagi." });
+    }
 
-        if (!imagenResponse.generatedImages?.length) {
-          return res.json({ error: "Gagal generate gambar dengan Imagen." });
-        }
+    console.log("✅ Video berhasil di-generate oleh Veo");
+    const videoFile = operation.response.generatedVideos[0].video;
+    const fileName = `generated_video_${Date.now()}.mp4`;
+    const localPath = path.join(os.tmpdir(), fileName);
 
-        imageData = {
-          imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
-          mimeType: "image/png",
-        };
-        console.log("✅ Fallback image berhasil dibuat via Imagen");
-      }
+    console.log("⬇️ Download video ke lokal tmp:", localPath);
+    await ai.files.download({ file: videoFile, downloadPath: localPath });
 
-      console.log("🎬 Kirim request generate video ke Veo...");
-      let operation = await ai.models.generateVideos({
-        model: veoModel || "veo-3.0-generate-001",
-        prompt,
-        image: imageData,
-        config: {
-          numberOfVideos: 1,
-          aspectRatio: aspectRatio || "16:9",
-        },
+    if (!fs.existsSync(localPath)) {
+      return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
+    }
+
+    console.log("📤 Upload video ke Supabase...");
+    const fileBuffer = fs.readFileSync(localPath);
+    const { error: uploadError } = await supabase.storage
+      .from("generated-files")
+      .upload(`videos/${fileName}`, fileBuffer, {
+        contentType: "video/mp4",
+        upsert: true,
       });
 
-      const operationId = operation.name || operation.operationId || operation.id;
-      console.log("🔍 Operation ID:", operationId);
+    fs.unlinkSync(localPath);
 
-      while (!operation.done) {
-        console.log("⏳ Menunggu video selesai diproses...");
-        await new Promise((r) => setTimeout(r, 8000));
-        operation = await ai.operations.getVideosOperation({ operation });
-      }
-
-      if (!operation.response?.generatedVideos?.length) {
-        return res.json({ error: "Gagal membuat video, coba lagi." });
-      }
-
-      console.log("✅ Video berhasil di-generate oleh Veo");
-      const videoFile = operation.response.generatedVideos[0].video;
-      const fileName = `generated_video_${Date.now()}.mp4`;
-      const localPath = path.join(os.tmpdir(), fileName);
-
-      console.log("⬇️ Download video ke lokal tmp:", localPath);
-      await ai.files.download({ file: videoFile, downloadPath: localPath });
-
-      if (!fs.existsSync(localPath)) {
-        return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
-      }
-
-      console.log("📤 Upload video ke Supabase...");
-      const fileBuffer = fs.readFileSync(localPath);
-      const { error: uploadError } = await supabase.storage
-        .from("generated-files")
-        .upload(`videos/${fileName}`, fileBuffer, {
-          contentType: "video/mp4",
-          upsert: true,
-        });
-
-      fs.unlinkSync(localPath);
-
-      if (uploadError) {
-        console.error("❌ Upload error:", uploadError.message);
-        return res.json({ error: "Gagal upload ke Supabase" });
-      }
-
-      const { data } = supabase.storage
-        .from("generated-files")
-        .getPublicUrl(`videos/${fileName}`);
-
-      console.log("✅ Video URL:", data.publicUrl);
-      res.json({ videoUrl: data.publicUrl, fileName });
-    } catch (err) {
-      console.error("❌ ERROR generate-video:", err);
-      return res.json({ error: "Terjadi kesalahan saat membuat video." });
+    if (uploadError) {
+      console.error("❌ Upload error:", uploadError.message);
+      return res.json({ error: "Gagal upload ke Supabase" });
     }
+
+    const { data } = supabase.storage
+      .from("generated-files")
+      .getPublicUrl(`videos/${fileName}`);
+
+    console.log("✅ Video URL:", data.publicUrl);
+    res.json({ videoUrl: data.publicUrl, fileName });
+  } catch (err) {
+    console.error("❌ ERROR generate-video:", err);
+    return res.json({ error: "Terjadi kesalahan saat membuat video." });
   }
-);
+});
 
 // ====================== API GENERATE IMAGE ======================
 router.post("/generate-image", async (req, res) => {
