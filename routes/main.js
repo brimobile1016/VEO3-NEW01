@@ -180,6 +180,11 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       file: videoFile,
       downloadPath: localPath,
     });
+    
+    // Pastikan file berhasil diunduh sebelum membacanya
+    if (!fs.existsSync(localPath)) {
+        return res.json({ error: "Gagal mengunduh video, silakan coba lagi." });
+    }
 
     // ✅ Upload ke Supabase
     const fileBuffer = fs.readFileSync(localPath);
@@ -189,6 +194,9 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         contentType: "video/mp4",
         upsert: true,
       });
+
+    // Hapus file sementara dari lokal setelah diunggah ke Supabase
+    fs.unlinkSync(localPath);
 
     if (uploadError) {
       console.error("❌ Upload error:", uploadError.message);
