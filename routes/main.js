@@ -83,8 +83,8 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
             operation = await ai.operations.getVideosOperation({ operation });
         }
 
-        const videoFile = operation.response?.generatedVideos?.[0];
-        if (!videoFile?.video?.uri) {
+         const generatedVideo = operation.response?.generatedVideos?.[0];
+        if (!generatedVideo?.video?.uri) {
             console.error("❌ [DEBUG] Video tidak tersedia dalam response.");
             return res.status(500).json({ error: "Video tidak tersedia dalam response." });
         }
