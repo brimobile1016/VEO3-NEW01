@@ -719,6 +719,18 @@
         </div>
     </div>
 </nav>
+<script>
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const closeMobileMenuBtn = document.getElementById('closeMobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    function toggleMobileMenu() {
+        mobileMenu.classList.toggle('hidden');
+    }
+
+    mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+    closeMobileMenuBtn.addEventListener('click', toggleMobileMenu);
+</script>
     <script>
     const videoForm = document.getElementById("videoForm");
     const imageForm = document.getElementById("imageForm");
