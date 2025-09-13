@@ -155,14 +155,13 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       return res.json({ error: "Gagal mendapatkan fileId dari video URI." });
     }
     const fileId = fileIdMatch[1];
-    const downloadUrl = `https://generativelanguage.googleapis.com/v1beta/files/${fileId}:download`;
+const downloadUrl = `https://generativelanguage.googleapis.com/v1beta/files/${fileId}:download?alt=media`;
 
-    console.log("📥 [DEBUG] Fetch video dari:", downloadUrl);
+console.log("📥 [DEBUG] Fetch video dari:", downloadUrl);
 
-    // ✅ Download video langsung dengan Authorization header
-    const response = await fetch(downloadUrl, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+const response = await fetch(downloadUrl, {
+  headers: { Authorization: `Bearer ${apiKey}` },
+});
 
     if (!response.ok) {
       console.error("❌ [DEBUG] Gagal fetch video:", response.status, response.statusText);
