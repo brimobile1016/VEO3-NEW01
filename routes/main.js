@@ -58,46 +58,30 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const ai = new GoogleGenAI({ apiKey });
     let imageData = null;
 
-    // Jika ada upload image, pakai itu
+    // Gunakan image upload atau generate
     if (file) {
       const imageBytes = fs.readFileSync(file.path);
-      imageData = {
-        imageBytes: imageBytes.toString("base64"),
-        mimeType: file.mimetype,
-      };
+      imageData = { imageBytes: imageBytes.toString("base64"), mimeType: file.mimetype };
     } else {
-      // Generate image via Imagen
       const imagenResponse = await ai.models.generateImages({
         model: "imagen-4.0-generate-001",
         prompt,
-        config: {
-          numberOfImages: 1,
-          aspectRatio: aspectRatio || "16:9",
-          sampleImageSize: "1K",
-        },
+        config: { numberOfImages: 1, aspectRatio: aspectRatio || "16:9", sampleImageSize: "1K" },
       });
-
       if (!imagenResponse.generatedImages?.length)
         return res.json({ error: "Gagal generate gambar dengan Imagen." });
 
-      imageData = {
-        imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
-        mimeType: "image/png",
-      };
+      imageData = { imageBytes: imagenResponse.generatedImages[0].image.imageBytes, mimeType: "image/png" };
     }
 
-    // Generate video dengan Veo
+    // Generate video
     let operation = await ai.models.generateVideos({
       model: veoModel || "veo-3.0-generate-001",
       prompt,
       image: imageData,
-      config: {
-        numberOfVideos: 1,
-        aspectRatio: aspectRatio || "16:9",
-      },
+      config: { numberOfVideos: 1, aspectRatio: aspectRatio || "16:9" },
     });
 
-    // Polling sampai video selesai
     while (!operation.done) {
       console.log("⏳ Menunggu video selesai...");
       await new Promise((r) => setTimeout(r, 5000));
@@ -107,15 +91,26 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const videoFile = operation.response?.generatedVideos?.[0]?.video;
     if (!videoFile?.uri) return res.json({ error: "Video URI kosong." });
 
-    // Download video ke server lokal
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    const fileName = `generated_video_${randomNumber}.mp4`;
-    const outputPath = path.join(os.tmpdir(), fileName);
+    // Download video ke temp folder
+    const tmpDir = path.join(os.tmpdir(), "videos");
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    await ai.files.download({
-      file: videoFile,
-      downloadPath: outputPath,
-    });
+    const fileName = `generated_video_${Math.floor(10000 + Math.random() * 90000)}.mp4`;
+    const outputPath = path.join(tmpDir, fileName);
+
+    let downloadSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await ai.files.download({ file: videoFile, downloadPath: outputPath });
+        downloadSuccess = true;
+        break;
+      } catch (err) {
+        console.warn(`⚠️ Percobaan download ${attempt} gagal:`, err.message);
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
+
+    if (!downloadSuccess) return res.json({ error: "Gagal download video setelah beberapa percobaan." });
 
     // Upload ke Supabase
     const fileBuffer = fs.readFileSync(outputPath);
@@ -123,17 +118,25 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       .from("generated-files")
       .upload(`videos/${fileName}`, fileBuffer, { contentType: "video/mp4", upsert: true });
 
-    fs.unlinkSync(outputPath); // hapus file lokal
+    fs.unlinkSync(outputPath); // hapus file temp
 
     if (uploadError) return res.json({ error: "Gagal upload ke Supabase" });
 
     const { data } = supabase.storage.from("generated-files").getPublicUrl(`videos/${fileName}`);
     res.json({ videoUrl: data.publicUrl, fileName });
+
   } catch (err) {
     console.error("❌ ERROR:", err);
     res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
+
+
+
+
+
+
+
 
 // ✅ API untuk generate gambar (penambahan baru)
 router.post("/generate-image", upload.single("image"), async (req, res) => {
