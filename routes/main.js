@@ -132,10 +132,12 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 console.log("📥 [DEBUG] Download video pakai ai.files.download()");
 const fileResponse = await ai.files.download(videoFile);
 
-// `fileResponse` masih berupa ReadableStream / ArrayBuffer → convert ke Buffer
-const arrayBuffer = await fileResponse.arrayBuffer();
-const buffer = Buffer.from(arrayBuffer);
+// `fileResponse` biasanya berupa Uint8Array atau Buffer
+const buffer = Buffer.isBuffer(fileResponse)
+  ? fileResponse
+  : Buffer.from(fileResponse);
 
+// lanjut upload ke Supabase
 const randomNumber = Math.floor(10000 + Math.random() * 90000);
 const fileName = `generated_video_${randomNumber}.mp4`;
 
