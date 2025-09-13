@@ -132,13 +132,6 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     res.setHeader("Content-Disposition", `inline; filename="${fileName}"`); // inline supaya bisa diputar langsung di browser
     const stream = fs.createReadStream(downloadPath);
     stream.pipe(res);
-
-    // Hapus file setelah streaming selesai
-    stream.on("end", () => {
-      fs.unlinkSync(downloadPath);
-      console.log("[DEBUG] File dihapus dari tmp:", downloadPath);
-    });
-
   } catch (err) {
     console.error("❌ [DEBUG] ERROR:", err);
     res.status(500).json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
