@@ -103,7 +103,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         console.log("⬆️ [DEBUG] Mengunggah video ke Supabase Storage...");
         const { data, error: uploadError } = await supabase.storage
             .from('generated-files') // Ganti dengan nama bucket Anda
-            .upload(fileName, videoBuffer, {
+            .upload(`videos/${fileName}`, videoBuffer, {
                 contentType: 'video/mp4',
             });
 
@@ -115,13 +115,14 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         // Dapatkan URL publik dari video
         const { data: publicUrlData } = supabase.storage
             .from('generated-files')
-            .getPublicUrl(fileName);
+            .getPublicUrl(`videos/${fileName}`);
 
         const videoUrl = publicUrlData.publicUrl;
         console.log("✅ [DEBUG] Video berhasil diunggah. URL:", videoUrl);
 
         // Kirimkan URL video kembali ke klien
-        res.status(200).json({ videoUrl });
+       // res.status(200).json({ videoUrl });
+      res.json({ videoUrl: videoUrl, fileName });
 
     } catch (err) {
         console.error("❌ [DEBUG] ERROR:", err);
