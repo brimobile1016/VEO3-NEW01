@@ -70,7 +70,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         console.log("📷 [DEBUG] Menggunakan file upload...");
         const imageBytes = fs.readFileSync(file.path);
         imageData = {
-          imageBytes: imageBytes.toString("base64"),
+          bytesBase64Encoded: imageBytes.toString("base64"),
           mimeType: file.mimetype,
         };
         fs.unlinkSync(file.path);
@@ -95,7 +95,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
         const base64Img = imagenResponse.generatedImages[0].b64Json;
         imageData = {
-          imageBytes: base64Img,
+          bytesBase64Encoded: base64Img,
           mimeType: "image/png",
         };
       }
