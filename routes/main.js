@@ -95,7 +95,9 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
             returnAs: 'buffer' // Mengatur respons sebagai buffer
         });
         console.log("✅ [DEBUG] Video berhasil diunduh sebagai buffer.");
-        
+        // Tambahkan log ini untuk memeriksa ukuran buffer
+console.log(`[DEBUG] Ukuran buffer: ${videoBuffer.length} bytes`);
+      
         // Buat nama file unik untuk Supabase
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
         const fileName = `generated_video_${randomNumber}.mp4`;
