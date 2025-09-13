@@ -48,96 +48,62 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 
 // ====================== API GENERATE VIDEO ======================
 router.post("/generate-video", upload.single("image"), async (req, res) => {
-  try {
-    console.log("🚀 [DEBUG] Mulai endpoint /generate-video");
-    console.log("[DEBUG] Body request:", req.body);
+    try {
+        console.log("🚀 [DEBUG] Mulai endpoint /generate-video");
+        const { apiKey, prompt, aspectRatio, veoModel } = req.body;
+        const file = req.file;
 
-    const { apiKey, prompt, aspectRatio, veoModel } = req.body;
-    const file = req.file;
-    console.log("[DEBUG] File upload:", file);
+        if (!apiKey) return res.status(400).json({ error: "API Key wajib diisi!" });
+        if (!prompt) return res.status(400).json({ error: "Prompt wajib diisi!" });
 
-    if (!apiKey) return res.status(400).json({ error: "API Key wajib diisi!" });
-    if (!prompt) return res.status(400).json({ error: "Prompt wajib diisi!" });
+        const ai = new GoogleGenAI({ apiKey });
+        let imageData = null;
 
-    const ai = new GoogleGenAI({ apiKey });
-    console.log("🔑 [DEBUG] GoogleGenAI instance dibuat");
+        if (file) {
+            console.log("📷 [DEBUG] Menggunakan file upload...");
+            imageData = {
+                imageBytes: fs.readFileSync(file.path).toString("base64"),
+                mimeType: file.mimetype,
+            };
+            fs.unlinkSync(file.path); // Bersihkan file gambar yang diunggah
+        }
 
-    let imageData = null;
+        console.log("🎬 [DEBUG] Generate video dengan Veo...");
+        let operation = await ai.models.generateVideos({
+            model: veoModel || "veo-3.0-generate-001",
+            prompt,
+            image: imageData, // Akan null jika tidak ada gambar
+            config: { numberOfVideos: 1, aspectRatio: aspectRatio || "16:9" },
+        });
 
-    if (file) {
-      console.log("📷 [DEBUG] Menggunakan file upload sebagai input gambar...");
-      const imageBytes = fs.readFileSync(file.path);
-      imageData = {
-        imageBytes: imageBytes.toString("base64"),
-        mimeType: file.mimetype,
-      };
-      console.log("[DEBUG] Image data berhasil dibuat dari file upload");
-      // Hapus file upload setelah dibaca
-      fs.unlinkSync(file.path);
-    } else {
-      console.log("🖼️ [DEBUG] Tidak ada upload gambar, generate via Imagen...");
-      const imagenResponse = await ai.models.generateImages({
-        model: "imagen-4.0-generate-001",
-        prompt,
-        config: { numberOfImages: 1, aspectRatio: aspectRatio || "16:9", sampleImageSize: "1K" },
-      });
+        while (!operation.done) {
+            console.log("⏳ [DEBUG] Menunggu proses video selesai...");
+            await new Promise((r) => setTimeout(r, 5000));
+            operation = await ai.operations.getVideosOperation({ operation });
+        }
 
-      if (!imagenResponse.generatedImages?.length)
-        return res.status(500).json({ error: "Gagal generate gambar dengan Imagen." });
+        const videoFile = operation.response?.generatedVideos?.[0]?.video;
+        if (!videoFile) {
+            console.error("❌ [DEBUG] Video tidak tersedia dalam response.");
+            return res.status(500).json({ error: "Video tidak tersedia dalam response." });
+        }
 
-      imageData = {
-        imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
-        mimeType: "image/png",
-      };
-      console.log("[DEBUG] Image data berhasil dibuat dari Imagen");
+        // Unduh video sebagai buffer, bukan ke file
+        console.log("📥 [DEBUG] Mengunduh video dari AI sebagai buffer...");
+        const videoBuffer = await ai.files.download({
+            file: videoFile,
+            returnAs: 'buffer' // Mengatur respons sebagai buffer
+        });
+        console.log("✅ [DEBUG] Video berhasil diunduh sebagai buffer.");
+        
+        // Kirimkan buffer video kembali ke klien dengan Content-Type yang benar
+        res.setHeader("Content-Type", "video/mp4");
+        res.send(videoBuffer);
+        
+    } catch (err) {
+        console.error("❌ [DEBUG] ERROR:", err);
+        res.status(500).json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
     }
-
-    console.log("🎬 [DEBUG] Generate video dengan Veo...");
-    let operation = await ai.models.generateVideos({
-      model: veoModel || "veo-3.0-generate-001",
-      prompt,
-      image: imageData,
-      config: { numberOfVideos: 1, aspectRatio: aspectRatio || "16:9" },
-    });
-
-    console.log("[DEBUG] Operation awal:", JSON.stringify(operation, null, 2));
-
-    // Polling sampai video selesai
-    while (!operation.done) {
-      console.log("⏳ [DEBUG] Menunggu proses video selesai...");
-      await new Promise((r) => setTimeout(r, 5000));
-      operation = await ai.operations.getVideosOperation({ operation });
-      console.log("[DEBUG] Update operation:", operation.done ? "Selesai" : "Belum selesai");
-    }
-
-    const videoFile = operation.response?.generatedVideos?.[0]?.video;
-    if (!videoFile) {
-  console.error("❌ [DEBUG] VideoFile kosong. Full operation response:", JSON.stringify(operation, null, 2));
-  return res.status(500).json({ error: "Video tidak tersedia dalam response." });
-}
-
-    // ❗ Vercel: gunakan folder tmp
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    const fileName = `generated_video_${randomNumber}.mp4`;
-    const downloadPath = path.join(os.tmpdir(), fileName);
-    console.log("[DEBUG] Path download video:", downloadPath);
-
-    console.log("📥 [DEBUG] Download video dari AI...");
-    await ai.files.download({
-      file: videoFile,
-      downloadPath,
-    });
-    console.log("✅ [DEBUG] Video berhasil didownload:", downloadPath);
-
-    // Streaming ke client
-    res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`); // inline supaya bisa diputar langsung di browser
-    const stream = fs.createReadStream(downloadPath);
-    stream.pipe(res);
-  } catch (err) {
-    console.error("❌ [DEBUG] ERROR:", err);
-    res.status(500).json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
-  }
 });
 
 
