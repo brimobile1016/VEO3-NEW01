@@ -101,7 +101,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         console.log("⬆️ [DEBUG] Mengunggah video ke Supabase Storage...");
         const { data, error: uploadError } = await supabase.storage
             .from('generated-files') // Ganti dengan nama bucket Anda
-            .upload(`videos/${fileName}`, videoBuffer, {
+            .upload(`videos/${fileName}`, videoStream, {
                 contentType: 'video/mp4',
             });
 
