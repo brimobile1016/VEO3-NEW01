@@ -9,13 +9,14 @@ import { Buffer } from "buffer";
 import { supabase } from "./supabase.js";
 import fetch from "node-fetch";
 
-
 const router = express();
 const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const outputDir = path.join(__dirname, "public", "video");
+if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 
 // ✅ Serve file statis
 router.get("/", (req, res) => {
@@ -161,8 +162,7 @@ const outputPath = path.join(outputDir, fileName);
 
 
     // ✅ Kembalikan URL agar bisa diakses langsung
-    res.json({ videoUrl: `/public/video/${fileName}`, fileName: `${fileName}` }
-    
+    res.json({ videoUrl: `/public/video/${fileName}`, fileName: `${fileName}` })    
   } catch (err) {
     console.error("❌ [DEBUG] ERROR:", err);
     if (err.message && err.message.includes("API key not valid")) {
