@@ -130,14 +130,28 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
 // ==================== DOWNLOAD + UPLOAD SUPABASE ====================
 console.log("📥 [DEBUG] Download video pakai ai.files.download()");
-const fileResponse = await ai.files.download(videoFile);
+const fileMeta = await ai.files.download(videoFile);
 
-// `fileResponse` biasanya berupa Uint8Array atau Buffer
-const buffer = Buffer.isBuffer(fileResponse)
-  ? fileResponse
-  : Buffer.from(fileResponse);
+console.log("📦 [DEBUG] Hasil ai.files.download():", fileMeta);
 
-// lanjut upload ke Supabase
+// Ambil URI dari response SDK
+const downloadUrl = fileMeta.uri || fileMeta.file?.uri;
+if (!downloadUrl) {
+  throw new Error("Download URL tidak ditemukan di response ai.files.download()");
+}
+
+// Fetch file dengan Authorization (SDK tidak auto-download binary)
+const response = await fetch(downloadUrl, {
+  headers: { Authorization: `Bearer ${apiKey}` },
+});
+
+if (!response.ok) {
+  throw new Error(`Gagal fetch video dari ${downloadUrl}: ${response.statusText}`);
+}
+
+const buffer = Buffer.from(await response.arrayBuffer());
+
+// ===== Upload ke Supabase =====
 const randomNumber = Math.floor(10000 + Math.random() * 90000);
 const fileName = `generated_video_${randomNumber}.mp4`;
 
