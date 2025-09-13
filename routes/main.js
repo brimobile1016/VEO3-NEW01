@@ -135,65 +135,25 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
     console.log("[DEBUG] Operation selesai:", JSON.stringify(operation, null, 2));
 
-    if (!operation.response?.generatedVideos?.length) {
-      console.log("❌ [DEBUG] Gagal membuat video");
-      return res.json({ error: "Gagal membuat video, coba lagi." });
-    }
+if (!operation.response?.generatedVideos?.length) {
+  console.log("❌ [DEBUG] Gagal membuat video");
+  return res.json({ error: "Gagal membuat video, coba lagi." });
+}
 
-    const videoFile = operation.response.generatedVideos[0].video;
-    console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
+const videoFile = operation.response.generatedVideos[0].video;
+console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
 
-    if (!videoFile?.uri) {
-      console.log("❌ [DEBUG] Video URI kosong");
-      return res.json({ error: "Video URI kosong, gagal download." });
-    }
+if (!videoFile?.uri) {
+  console.log("❌ [DEBUG] Video URI kosong");
+  return res.json({ error: "Video URI kosong, gagal download." });
+}
 
-    // 🔑 Extract fileId dari URI
-    const fileIdMatch = videoFile.uri.match(/files\/([^:]+)/);
-    if (!fileIdMatch) {
-      console.log("❌ [DEBUG] Tidak bisa extract fileId dari URI");
-      return res.json({ error: "Gagal mendapatkan fileId dari video URI." });
-    }
-    const fileId = fileIdMatch[1];
-const downloadUrl = `https://generativelanguage.googleapis.com/v1beta/files/${fileId}:download?alt=media`;
-
-console.log("📥 [DEBUG] Fetch video dari:", downloadUrl);
-
-const response = await fetch(downloadUrl, {
-  headers: { Authorization: `Bearer ${apiKey}` },
+// ✅ Langsung kirim URI ke frontend (tanpa fetch manual)
+return res.json({
+  success: true,
+  videoUrl: videoFile.uri,
 });
-
-    if (!response.ok) {
-      console.error("❌ [DEBUG] Gagal fetch video:", response.status, response.statusText);
-      return res.json({ error: `Gagal download video (${response.status})` });
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    // ===== Upload ke Supabase =====
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    const fileName = `generated_video_${randomNumber}.mp4`;
-
-    console.log("📤 [DEBUG] Upload video ke Supabase...");
-    const { error: uploadError } = await supabase.storage
-      .from("generated-files")
-      .upload(`videos/${fileName}`, buffer, {
-        contentType: "video/mp4",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("❌ [DEBUG] Upload error:", uploadError.message);
-      return res.json({ error: "Gagal upload ke Supabase" });
-    }
-
-    const { data } = supabase.storage
-      .from("generated-files")
-      .getPublicUrl(`videos/${fileName}`);
-
-    console.log("✅ [DEBUG] Video URL:", data.publicUrl);
-    res.json({ videoUrl: data.publicUrl, fileName });
-
+    
   } catch (err) {
     console.error("❌ [DEBUG] ERROR:", err);
     if (err.message && err.message.includes("API key not valid")) {
