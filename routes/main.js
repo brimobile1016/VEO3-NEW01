@@ -52,29 +52,45 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const { apiKey, prompt, aspectRatio, veoModel } = req.body;
     const file = req.file;
 
+    console.log("🚀 [DEBUG] Mulai endpoint /generate-video");
+    console.log("[DEBUG] Body request:", req.body);
+    console.log("[DEBUG] File upload:", file);
+
     if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
     if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
 
     const ai = new GoogleGenAI({ apiKey });
+    console.log("🔑 [DEBUG] GoogleGenAI instance dibuat");
+
     let imageData = null;
 
-    // Gunakan image upload atau generate
     if (file) {
+      console.log("📷 [DEBUG] Menggunakan file upload sebagai input gambar...");
       const imageBytes = fs.readFileSync(file.path);
-      imageData = { imageBytes: imageBytes.toString("base64"), mimeType: file.mimetype };
+      imageData = {
+        imageBytes: imageBytes.toString("base64"),
+        mimeType: file.mimetype,
+      };
+      console.log("[DEBUG] Image data berhasil dibuat dari file upload");
     } else {
+      console.log("🖼️ [DEBUG] Tidak ada upload gambar, generate via Imagen...");
       const imagenResponse = await ai.models.generateImages({
         model: "imagen-4.0-generate-001",
         prompt,
         config: { numberOfImages: 1, aspectRatio: aspectRatio || "16:9", sampleImageSize: "1K" },
       });
+
       if (!imagenResponse.generatedImages?.length)
         return res.json({ error: "Gagal generate gambar dengan Imagen." });
 
-      imageData = { imageBytes: imagenResponse.generatedImages[0].image.imageBytes, mimeType: "image/png" };
+      imageData = {
+        imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
+        mimeType: "image/png",
+      };
+      console.log("[DEBUG] Image data berhasil dibuat dari Imagen");
     }
 
-    // Generate video
+    console.log("🎬 [DEBUG] Generate video dengan Veo...");
     let operation = await ai.models.generateVideos({
       model: veoModel || "veo-3.0-generate-001",
       prompt,
@@ -82,54 +98,64 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       config: { numberOfVideos: 1, aspectRatio: aspectRatio || "16:9" },
     });
 
+    console.log("[DEBUG] Operation awal:", JSON.stringify(operation, null, 2));
+
+    // Polling sampai selesai
     while (!operation.done) {
-      console.log("⏳ Menunggu video selesai...");
+      console.log("⏳ [DEBUG] Menunggu proses video selesai...");
       await new Promise((r) => setTimeout(r, 5000));
       operation = await ai.operations.getVideosOperation({ operation });
+      console.log("[DEBUG] Update operation:", JSON.stringify(operation.done ? "Selesai" : "Belum selesai"));
     }
 
     const videoFile = operation.response?.generatedVideos?.[0]?.video;
     if (!videoFile?.uri) return res.json({ error: "Video URI kosong." });
+    console.log("🎥 [DEBUG] Video URI ditemukan:", videoFile.uri);
 
-    // Download video ke temp folder
-    const tmpDir = path.join(os.tmpdir(), "videos");
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-    const fileName = `generated_video_${Math.floor(10000 + Math.random() * 90000)}.mp4`;
-    const outputPath = path.join(tmpDir, fileName);
-
-    let downloadSuccess = false;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await ai.files.download({ file: videoFile, downloadPath: outputPath });
-        downloadSuccess = true;
-        break;
-      } catch (err) {
-        console.warn(`⚠️ Percobaan download ${attempt} gagal:`, err.message);
-        await new Promise(r => setTimeout(r, 3000));
-      }
+    // Temp folder untuk download
+    const tempVideoDir = path.join(os.tmpdir(), "videos");
+    if (!fs.existsSync(tempVideoDir)) {
+      fs.mkdirSync(tempVideoDir, { recursive: true });
+      console.log("[DEBUG] Temp video folder dibuat:", tempVideoDir);
+    } else {
+      console.log("[DEBUG] Temp video folder sudah ada:", tempVideoDir);
     }
 
-    if (!downloadSuccess) return res.json({ error: "Gagal download video setelah beberapa percobaan." });
+    const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    const fileName = `generated_video_${randomNumber}.mp4`;
+    const outputPath = path.join(tempVideoDir, fileName);
+    console.log("[DEBUG] Path untuk download video:", outputPath);
 
-    // Upload ke Supabase
+    console.log("📥 [DEBUG] Download video dari AI ke temp folder...");
+    await ai.files.download({ file: videoFile, downloadPath: outputPath });
+    console.log("✅ [DEBUG] Video berhasil didownload ke temp folder");
+
     const fileBuffer = fs.readFileSync(outputPath);
+    console.log("[DEBUG] File buffer berhasil dibuat dari temp file");
+
+    console.log("📤 [DEBUG] Upload video ke Supabase...");
     const { error: uploadError } = await supabase.storage
       .from("generated-files")
       .upload(`videos/${fileName}`, fileBuffer, { contentType: "video/mp4", upsert: true });
 
-    fs.unlinkSync(outputPath); // hapus file temp
+    fs.unlinkSync(outputPath);
+    console.log("[DEBUG] Temp file dihapus:", outputPath);
 
-    if (uploadError) return res.json({ error: "Gagal upload ke Supabase" });
+    if (uploadError) {
+      console.error("❌ [DEBUG] Upload error:", uploadError.message);
+      return res.json({ error: "Gagal upload ke Supabase" });
+    }
 
     const { data } = supabase.storage.from("generated-files").getPublicUrl(`videos/${fileName}`);
-    res.json({ videoUrl: data.publicUrl, fileName });
+    console.log("✅ [DEBUG] Video URL Supabase:", data.publicUrl);
 
+    res.json({ videoUrl: data.publicUrl, fileName });
   } catch (err) {
-    console.error("❌ ERROR:", err);
+    console.error("❌ [DEBUG] ERROR:", err);
     res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
+
 
 
 
