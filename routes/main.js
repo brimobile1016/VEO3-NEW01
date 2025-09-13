@@ -88,24 +88,11 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
             return res.status(500).json({ error: "Video tidak tersedia dalam response." });
         }
 
-        console.log("📥 [DEBUG] Mengunduh video dari AI sebagai buffer...");
-        let videoBuffer;
-        try {
-            videoBuffer = await ai.files.download({
-                file: videoFile,
-                returnAs: 'buffer'
-            });
-        } catch (downloadErr) {
-            console.error("❌ [DEBUG] Gagal mengunduh video:", downloadErr);
-            return res.status(500).json({ error: "Gagal mengunduh video dari layanan AI." });
-        }
-
-        // Periksa apakah videoBuffer benar-benar berisi data
-        if (!videoBuffer || videoBuffer.length === 0) {
-            console.error("❌ [DEBUG] Video buffer kosong setelah diunduh.");
-            return res.status(500).json({ error: "Data video kosong setelah diunduh." });
-        }
-        console.log(`✅ [DEBUG] Video berhasil diunduh. Ukuran buffer: ${videoBuffer.length} bytes`);
+        console.log("📥 [DEBUG] Mengunduh video dari AI sebagai stream...");
+        const videoStream = await ai.files.download({
+            file: videoFile,
+            returnAs: 'stream'
+        });
       
         // Buat nama file unik untuk Supabase
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
