@@ -128,44 +128,36 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
     console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
 
-    // ==================== DOWNLOAD + UPLOAD SUPABASE ====================
-    let fetchOptions = {};
-    if (videoFile.uri.includes("generativelanguage.googleapis.com")) {
-      console.log("🔑 [DEBUG] URI Google API, gunakan Authorization header");
-      fetchOptions.headers = { Authorization: `Bearer ${apiKey}` };
-    }
+// ==================== DOWNLOAD + UPLOAD SUPABASE ====================
+console.log("📥 [DEBUG] Download video pakai ai.files.download()");
+const fileResponse = await ai.files.download(videoFile);
 
-    const response = await fetch(videoFile.uri, fetchOptions);
-    if (!response.ok) {
-      console.log("❌ [DEBUG] Gagal fetch video:", response.status, response.statusText);
-      return res.json({ error: "Gagal download video dari Veo" });
-    }
+// `fileResponse` masih berupa ReadableStream / ArrayBuffer → convert ke Buffer
+const arrayBuffer = await fileResponse.arrayBuffer();
+const buffer = Buffer.from(arrayBuffer);
 
-    const buffer = Buffer.from(await response.arrayBuffer());
+const randomNumber = Math.floor(10000 + Math.random() * 90000);
+const fileName = `generated_video_${randomNumber}.mp4`;
 
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    const fileName = `generated_video_${randomNumber}.mp4`;
+console.log("📤 [DEBUG] Upload video langsung ke Supabase...");
+const { error: uploadError } = await supabase.storage
+  .from("generated-files")
+  .upload(`videos/${fileName}`, buffer, {
+    contentType: "video/mp4",
+    upsert: true,
+  });
 
-    console.log("📤 [DEBUG] Upload video langsung ke Supabase...");
-    const { error: uploadError } = await supabase.storage
-      .from("generated-files")
-      .upload(`videos/${fileName}`, buffer, {
-        contentType: "video/mp4",
-        upsert: true,
-      });
+if (uploadError) {
+  console.error("❌ [DEBUG] Upload error:", uploadError.message);
+  return res.json({ error: "Gagal upload ke Supabase" });
+}
 
-    if (uploadError) {
-      console.error("❌ [DEBUG] Upload error:", uploadError.message);
-      return res.json({ error: "Gagal upload ke Supabase" });
-    }
+const { data } = supabase.storage
+  .from("generated-files")
+  .getPublicUrl(`videos/${fileName}`);
 
-    const { data } = supabase.storage
-      .from("generated-files")
-      .getPublicUrl(`videos/${fileName}`);
-
-    console.log("✅ [DEBUG] Video URL:", data.publicUrl);
-    res.json({ videoUrl: data.publicUrl, fileName });
-
+console.log("✅ [DEBUG] Video URL:", data.publicUrl);
+res.json({ videoUrl: data.publicUrl, fileName });
   } catch (err) {
     console.error("❌ [DEBUG] ERROR:", err);
     if (err.message && err.message.includes("API key not valid")) {
