@@ -111,8 +111,10 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     }
 
     const videoFile = operation.response?.generatedVideos?.[0]?.video;
-    if (!videoFile?.uri) return res.status(500).json({ error: "Video URI kosong." });
-    console.log("🎥 [DEBUG] Video URI ditemukan:", videoFile.uri);
+    if (!videoFile) {
+  console.error("❌ [DEBUG] VideoFile kosong. Full operation response:", JSON.stringify(operation, null, 2));
+  return res.status(500).json({ error: "Video tidak tersedia dalam response." });
+}
 
     // ❗ Vercel: gunakan folder tmp
     const randomNumber = Math.floor(10000 + Math.random() * 90000);
