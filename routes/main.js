@@ -8,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 import { supabase } from "./supabase.js";
 import fetch from "node-fetch";
+import { PassThrough } from 'stream';
 
 const router = express();
 const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
