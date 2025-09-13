@@ -129,33 +129,28 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
 
 // ==================== DOWNLOAD + UPLOAD SUPABASE ====================
-console.log("📥 [DEBUG] Download video pakai ai.files.download()");
-const fileMeta = await ai.files.download(videoFile);
+const downloadUrl = videoFile.uri;
+console.log("🎥 [DEBUG] Video URI:", downloadUrl);
 
-console.log("📦 [DEBUG] Hasil ai.files.download():", fileMeta);
-
-// Ambil URI dari response SDK
-const downloadUrl = fileMeta.uri || fileMeta.file?.uri;
-if (!downloadUrl) {
-  throw new Error("Download URL tidak ditemukan di response ai.files.download()");
+let fetchOptions = {};
+if (downloadUrl.includes("generativelanguage.googleapis.com")) {
+  console.log("🔑 [DEBUG] URI Google API, gunakan Authorization header");
+  fetchOptions.headers = { Authorization: `Bearer ${apiKey}` };
 }
 
-// Fetch file dengan Authorization (SDK tidak auto-download binary)
-const response = await fetch(downloadUrl, {
-  headers: { Authorization: `Bearer ${apiKey}` },
-});
-
+const response = await fetch(downloadUrl, fetchOptions);
 if (!response.ok) {
-  throw new Error(`Gagal fetch video dari ${downloadUrl}: ${response.statusText}`);
+  console.error("❌ [DEBUG] Gagal fetch video:", response.status, response.statusText);
+  return res.json({ error: `Gagal download video (${response.status})` });
 }
 
 const buffer = Buffer.from(await response.arrayBuffer());
 
-// ===== Upload ke Supabase =====
+// Upload ke Supabase
 const randomNumber = Math.floor(10000 + Math.random() * 90000);
 const fileName = `generated_video_${randomNumber}.mp4`;
 
-console.log("📤 [DEBUG] Upload video langsung ke Supabase...");
+console.log("📤 [DEBUG] Upload video ke Supabase...");
 const { error: uploadError } = await supabase.storage
   .from("generated-files")
   .upload(`videos/${fileName}`, buffer, {
