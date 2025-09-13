@@ -634,134 +634,108 @@
         </div>
     </footer>
     <script>
-    const videoForm = document.getElementById("videoForm");
-    const imageForm = document.getElementById("imageForm");
-    const loading = document.getElementById("loading");
-    const result = document.getElementById("result");
-    
-    let currentMode = 'veo'; // Track current mode
-    let checkInterval = null; // Variable untuk menyimpan ID interval polling
-    let operationId = null; // Variable untuk menyimpan ID operasi video
+        const videoForm = document.getElementById("videoForm");
+        const imageForm = document.getElementById("imageForm");
+        const loading = document.getElementById("loading");
+        const result = document.getElementById("result");
+        
+        let currentMode = 'veo'; // Track current mode
 
-    // Navigation functions
-    function showVeoGenerator() {
-        currentMode = 'veo';
-        document.getElementById('veoGenerator').classList.remove('hidden');
-        document.getElementById('imageGenerator').classList.add('hidden');
-        
-        // Update nav buttons
-        document.getElementById('veoBtn').className = 'nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium';
-        document.getElementById('imageBtn').className = 'nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium';
-        
-        // Update hero content
-        document.getElementById('heroSubtitle').textContent = 'AI-Powered Video Generation';
-        document.getElementById('heroTitle').innerHTML = `
-            <span class="text-white">Create</span>
-            <span class="text-gradient"> Stunning</span>
-            <br>
-            <span class="text-white">Videos in</span>
-            <span class="text-gradient"> Seconds</span>
-        `;
-        document.getElementById('heroDescription').textContent = 'Transform your ideas into professional-grade videos using our cutting-edge AI technology. No experience required, just pure creativity.';
-        
-        // Clear results
-        result.innerHTML = "";
-        loading.style.display = "none";
-    }
-
-    function showImageGenerator() {
-        currentMode = 'image';
-        document.getElementById('veoGenerator').classList.add('hidden');
-        document.getElementById('imageGenerator').classList.remove('hidden');
-        
-        // Update nav buttons
-        document.getElementById('veoBtn').className = 'nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium';
-        document.getElementById('imageBtn').className = 'nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium';
-        
-        // Update hero content
-        document.getElementById('heroSubtitle').textContent = 'AI-Powered Image Generation';
-        document.getElementById('heroTitle').innerHTML = `
-            <span class="text-white">Generate</span>
-            <span class="text-gradient"> Amazing</span>
-            <br>
-            <span class="text-white">Images with</span>
-            <span class="text-gradient"> AI</span>
-        `;
-        document.getElementById('heroDescription').textContent = 'Create stunning, high-quality images from simple text descriptions using advanced AI technology. Perfect for any creative project.';
-        
-        // Clear results
-        result.innerHTML = "";
-        loading.style.display = "none";
-    }
-
-    // Fungsi helper untuk menampilkan error
-    function handleConnectionError(err) {
-        if (checkInterval) {
-            clearInterval(checkInterval); // Pastikan polling berhenti
-        }
-        loading.style.display = "none";
-        result.innerHTML = `
-            <div class="glass-morphism rounded-3xl p-8 border-l-4 border-orange-500">
-                <div class="flex items-start space-x-4">
-                    <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-wifi text-orange-400 text-xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-white font-semibold text-lg mb-2">Connection Error</h3>
-                        <p class="text-orange-300 mb-4">${err.message}</p>
-                        <button onclick="location.reload()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                            <i class="fas fa-redo mr-2"></i>Retry
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Video form submission (existing VEO functionality)
-    videoForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        result.innerHTML = "";
-        loading.style.display = "block";
-        
-        document.getElementById('loadingIcon').className = 'fas fa-video text-indigo-400 text-2xl';
-        document.getElementById('loadingTitle').textContent = 'Processing Your Video';
-        document.getElementById('loadingDescription').innerHTML = 'Our AI is working hard to create something amazing<span class="loading-dots"></span>';
-        
-        loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        const formData = new FormData(videoForm);
-
-        try {
-            // STEP 1: Mulai proses di server
-            const startResponse = await fetch("/api/start-video-generation", {
-                method: "POST",
-                body: formData
-            });
-
-            const startData = await startResponse.json();
+        // Navigation functions
+        function showVeoGenerator() {
+            currentMode = 'veo';
+            document.getElementById('veoGenerator').classList.remove('hidden');
+            document.getElementById('imageGenerator').classList.add('hidden');
             
-            if (startData.error) {
+            // Update nav buttons
+            document.getElementById('veoBtn').className = 'nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium';
+            document.getElementById('imageBtn').className = 'nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium';
+            
+            // Update hero content
+            document.getElementById('heroSubtitle').textContent = 'AI-Powered Video Generation';
+            document.getElementById('heroTitle').innerHTML = `
+                <span class="text-white">Create</span>
+                <span class="text-gradient"> Stunning</span>
+                <br>
+                <span class="text-white">Videos in</span>
+                <span class="text-gradient"> Seconds</span>
+            `;
+            document.getElementById('heroDescription').textContent = 'Transform your ideas into professional-grade videos using our cutting-edge AI technology. No experience required, just pure creativity.';
+            
+            // Clear results
+            result.innerHTML = "";
+            loading.style.display = "none";
+        }
+
+        function showImageGenerator() {
+            currentMode = 'image';
+            document.getElementById('veoGenerator').classList.add('hidden');
+            document.getElementById('imageGenerator').classList.remove('hidden');
+            
+            // Update nav buttons
+            document.getElementById('veoBtn').className = 'nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium';
+            document.getElementById('imageBtn').className = 'nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium';
+            
+            // Update hero content
+            document.getElementById('heroSubtitle').textContent = 'AI-Powered Image Generation';
+            document.getElementById('heroTitle').innerHTML = `
+                <span class="text-white">Generate</span>
+                <span class="text-gradient"> Amazing</span>
+                <br>
+                <span class="text-white">Images with</span>
+                <span class="text-gradient"> AI</span>
+            `;
+            document.getElementById('heroDescription').textContent = 'Create stunning, high-quality images from simple text descriptions using advanced AI technology. Perfect for any creative project.';
+            
+            // Clear results
+            result.innerHTML = "";
+            loading.style.display = "none";
+        }
+
+        // Video form submission (existing VEO functionality)
+        videoForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            result.innerHTML = "";
+            loading.style.display = "block";
+            
+            // Update loading content for video
+            document.getElementById('loadingIcon').className = 'fas fa-video text-indigo-400 text-2xl';
+            document.getElementById('loadingTitle').textContent = 'Processing Your Video';
+            document.getElementById('loadingDescription').innerHTML = 'Our AI is working hard to create something amazing<span class="loading-dots"></span>';
+            
+            loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const formData = new FormData(videoForm);
+
+            try {
+                const response = await fetch("/generate-video", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log("Server response:", data);
                 loading.style.display = "none";
-                handleConnectionError(new Error(startData.error));
-                return;
-            }
 
-            operationId = startData.operationId;
-            document.getElementById('loadingDescription').innerHTML = 'Proses dimulai, menunggu hasil<span class="loading-dots"></span>';
-
-            // STEP 2: Mulai polling untuk memeriksa status
-            checkInterval = setInterval(async () => {
-                const checkResponse = await fetch(`/api/check-video-status?operationId=${operationId}&apiKey=${formData.get('apiKey')}`);
-                const checkData = await checkResponse.json();
-
-                if (checkData.status === 'complete') {
-                    clearInterval(checkInterval); // Hentikan polling
-                    loading.style.display = "none";
-                    
-                    const videoUrl = checkData.videoUrl;
-                    
+                if (data.error) {
+                    result.innerHTML = `
+                        <div class="glass-morphism rounded-3xl p-8 border-l-4 border-red-500">
+                            <div class="flex items-start space-x-4">
+                                <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-white font-semibold text-lg mb-2">Generation Failed</h3>
+                                    <p class="text-red-300 mb-4">${data.error}</p>
+                                    <button onclick="location.reload()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-redo mr-2"></i>Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
                     result.innerHTML = `
                         <div class="glass-morphism rounded-3xl p-8 hover-lift">
                             <div class="text-center mb-8">
@@ -773,14 +747,15 @@
                             </div>
                             
                             <div class="bg-black/50 rounded-2xl p-6 mb-8">
+                                
                                 <video controls muted class="w-full rounded-xl shadow-2xl">
-                                    <source src="${videoUrl}" type="video/mp4">
-                                    Browser Anda tidak mendukung pemutar video.
-                                </video>
+    <source src="${data.videoUrl}" type="video/mp4">
+    Browser Anda tidak mendukung pemutar video.
+  </video>
                             </div>
                             
                             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                                <a href="${videoUrl}" download="vidcraft_output.mp4" 
+                                <a href="${data.videoUrl}" download="vidcraft_output.mp4" 
                                    class="flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
                                     <i class="fas fa-download mr-2"></i>
                                     Download HD Video
@@ -801,349 +776,280 @@
                             </div>
                         </div>
                     `;
-                    getVideoSize(videoUrl);
-                    result.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else if (checkData.status === 'processing') {
-                    document.getElementById('loadingDescription').innerHTML = 'Video masih diproses. Menunggu<span class="loading-dots"></span>';
-                } else {
-                    clearInterval(checkInterval); // Hentikan polling jika terjadi error
-                    handleConnectionError(new Error(checkData.error));
+                    getVideoSize(data.videoUrl);
                 }
-            }, 5000); // Polling setiap 5 detik
-            
-        } catch (err) {
-            handleConnectionError(err);
-        }
-    });
-
-    // Image form submission (new functionality)
-    imageForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        result.innerHTML = "";
-        loading.style.display = "block";
-        
-        // Update loading content for image
-        document.getElementById('loadingIcon').className = 'fas fa-image text-indigo-400 text-2xl';
-        document.getElementById('loadingTitle').textContent = 'Generating Your Image';
-        document.getElementById('loadingDescription').innerHTML = 'AI is creating your masterpiece<span class="loading-dots"></span>';
-        
-        loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        const formData = new FormData(imageForm);
-
-        try {
-            const response = await fetch("/generate-image", {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-            loading.style.display = "none";
-
-            if (data.error) {
+                
+                result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+            } catch (err) {
+                loading.style.display = "none";
                 result.innerHTML = `
-                    <div class="glass-morphism rounded-3xl p-8 border-l-4 border-red-500">
+                    <div class="glass-morphism rounded-3xl p-8 border-l-4 border-orange-500">
                         <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                            <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-wifi text-orange-400 text-xl"></i>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-white font-semibold text-lg mb-2">Generation Failed</h3>
-                                <p class="text-red-300 mb-4">${data.error}</p>
-                                <button onclick="location.reload()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                                    <i class="fas fa-redo mr-2"></i>Try Again
-                                </button>
+                                <h3 class="text-white font-semibold text-lg mb-2">Connection Error</h3>
+                                <p class="text-orange-300 mb-4">Unable to connect to our servers: ${err.message}</p>
+                                <div class="flex space-x-3">
+                                    <button onclick="location.reload()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-redo mr-2"></i>Retry
+                                    </button>
+                                    <button onclick="checkStatus()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-heartbeat mr-2"></i>Check Status
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
-            } else {
+            }
+        });
+
+        // Image form submission (new functionality)
+        imageForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            result.innerHTML = "";
+            loading.style.display = "block";
+            
+            // Update loading content for image
+            document.getElementById('loadingIcon').className = 'fas fa-image text-indigo-400 text-2xl';
+            document.getElementById('loadingTitle').textContent = 'Generating Your Image';
+            document.getElementById('loadingDescription').innerHTML = 'AI is creating your masterpiece<span class="loading-dots"></span>';
+            
+            loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const formData = new FormData(imageForm);
+
+            try {
+                const response = await fetch("/generate-image", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+                loading.style.display = "none";
+
+                if (data.error) {
+                    result.innerHTML = `
+                        <div class="glass-morphism rounded-3xl p-8 border-l-4 border-red-500">
+                            <div class="flex items-start space-x-4">
+                                <div class="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-red-400 text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-white font-semibold text-lg mb-2">Generation Failed</h3>
+                                    <p class="text-red-300 mb-4">${data.error}</p>
+                                    <button onclick="location.reload()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-redo mr-2"></i>Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="glass-morphism rounded-3xl p-8 hover-lift">
+                            <div class="text-center mb-8">
+                                <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 pulse-glow">
+                                    <i class="fas fa-check text-white text-3xl"></i>
+                                </div>
+                                <h3 class="text-white font-bold text-2xl mb-2">Image Generated Successfully!</h3>
+                                <p class="text-gray-400">Your AI-generated image is ready for download</p>
+                            </div>
+                            
+                            <div class="bg-black/50 rounded-2xl p-6 mb-8">
+                                <img src="${data.imageUrl}" alt="Generated Image" class="w-full rounded-xl shadow-2xl">
+                            </div>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                <a href="${data.imageUrl}" download="vidcraft_image.png" 
+                                   class="flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Download HD Image
+                                </a>
+                                <button onclick="generateAnother()" 
+                                        class="flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    Generate Another
+                                </button>
+                            </div>
+                            
+                            <div class="mt-6 p-4 bg-slate-800/50 rounded-xl">
+                                <div class="flex items-center justify-between text-sm text-gray-400">
+                                    <span>Processing Time: 12s</span>
+                                    <span>Quality: High Resolution</span>
+                                    <span>Format: PNG</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+            } catch (err) {
+                loading.style.display = "none";
                 result.innerHTML = `
-                    <div class="glass-morphism rounded-3xl p-8 hover-lift">
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 pulse-glow">
-                                <i class="fas fa-check text-white text-3xl"></i>
+                    <div class="glass-morphism rounded-3xl p-8 border-l-4 border-orange-500">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-wifi text-orange-400 text-xl"></i>
                             </div>
-                            <h3 class="text-white font-bold text-2xl mb-2">Image Generated Successfully!</h3>
-                            <p class="text-gray-400">Your AI-generated image is ready for download</p>
-                        </div>
-                        
-                        <div class="bg-black/50 rounded-2xl p-6 mb-8">
-                            <img src="${data.imageUrl}" alt="Generated Image" class="w-full rounded-xl shadow-2xl">
-                        </div>
-                        
-                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                            <a href="${data.imageUrl}" download="vidcraft_image.png" 
-                               class="flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                                <i class="fas fa-download mr-2"></i>
-                                Download HD Image
-                            </a>
-                            <button onclick="generateAnother()" 
-                                    class="flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                                <i class="fas fa-plus mr-2"></i>
-                                Generate Another
-                            </button>
-                        </div>
-                        
-                        <div class="mt-6 p-4 bg-slate-800/50 rounded-xl">
-                            <div class="flex items-center justify-between text-sm text-gray-400">
-                                <span>Processing Time: 12s</span>
-                                <span>Quality: High Resolution</span>
-                                <span>Format: PNG</span>
+                            <div class="flex-1">
+                                <h3 class="text-white font-semibold text-lg mb-2">Connection Error</h3>
+                                <p class="text-orange-300 mb-4">Unable to connect to our servers: ${err.message}</p>
+                                <div class="flex space-x-3">
+                                    <button onclick="location.reload()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-redo mr-2"></i>Retry
+                                    </button>
+                                    <button onclick="checkStatus()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                        <i class="fas fa-heartbeat mr-2"></i>Check Status
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             }
-            
-            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-        } catch (err) {
-            loading.style.display = "none";
-            result.innerHTML = `
-                <div class="glass-morphism rounded-3xl p-8 border-l-4 border-orange-500">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-wifi text-orange-400 text-xl"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-white font-semibold text-lg mb-2">Connection Error</h3>
-                            <p class="text-orange-300 mb-4">Unable to connect to our servers: ${err.message}</p>
-                            <div class="flex space-x-3">
-                                <button onclick="location.reload()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                                    <i class="fas fa-redo mr-2"></i>Retry
-                                </button>
-                                <button onclick="checkStatus()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                                    <i class="fas fa-heartbeat mr-2"></i>Check Status
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    });
+        });
 
-    // Helper functions
-    function generateAnother() {
-        if (currentMode === 'veo') {
-            videoForm.reset();
-        } else {
-            imageForm.reset();
-        }
-        result.innerHTML = "";
-        document.querySelector(currentMode === 'veo' ? '#veoGenerator' : '#imageGenerator').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    
-    // Fungsi untuk menghitung ukuran video
-    async function getVideoSize(videoPath) {
-        try {
-            const response = await fetch(videoPath, { method: "HEAD" });
-            const contentLength = response.headers.get("Content-Length");
-            if (contentLength) {
-                const sizeMB = (contentLength / (1024 * 1024)).toFixed(2);
-                document.getElementById("video-info").innerText = `Ukuran video: ${sizeMB} MB`;
+        // Helper functions
+        function generateAnother() {
+            if (currentMode === 'veo') {
+                videoForm.reset();
             } else {
-                document.getElementById("video-info").innerText = "Ukuran video tidak dapat dihitung.";
+                imageForm.reset();
             }
-        } catch (error) {
-            document.getElementById("video-info").innerText = "Gagal mendapatkan ukuran video.";
+            result.innerHTML = "";
+            document.querySelector(currentMode === 'veo' ? '#veoGenerator' : '#imageGenerator').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    }
 
-    // Fungsi untuk memeriksa status
-    async function checkStatus() {
-        if (!operationId) {
-            // Tampilan pesan error jika tidak ada ID operasi
-            result.innerHTML = `
-                <div class="glass-morphism rounded-3xl p-8 border-l-4 border-orange-500">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-info-circle text-orange-400 text-xl"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-white font-semibold text-lg mb-2">No Operation Found</h3>
-                            <p class="text-orange-300 mb-4">You need to generate a video first before checking its status.</p>
-                        </div>
-                    </div>
-                </div>
+        function checkStatus() {
+            // Using a custom message box instead of alert()
+            const message = 'All systems operational! Please try again.';
+            const messageBox = document.createElement('div');
+            messageBox.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 20px;
+                background-color: #1a202c;
+                color: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                text-align: center;
+                border: 1px solid #4a5568;
+                max-width: 80%;
             `;
+            messageBox.innerHTML = `
+                <p class="mb-4">${message}</p>
+                <button onclick="this.parentNode.remove()" style="padding: 8px 16px; background-color: #4a5568; border-radius: 5px; color: white;">OK</button>
+            `;
+            document.body.appendChild(messageBox);
+        }
+
+        // Enhanced file upload feedback for both forms
+        const imageInput = document.getElementById('image');
+        const referenceImageInput = document.getElementById('referenceImage');
+
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const uploadArea = e.target.closest('.relative');
+                const feedback = uploadArea.querySelector('.space-y-3');
+                feedback.innerHTML = `
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                        <i class="fas fa-check text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-medium">${file.name}</p>
+                        <p class="text-gray-400 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB • Siap diproses</p>
+                    </div>
+                `;
+            }
+        });
+
+        referenceImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const uploadArea = e.target.closest('.relative');
+                const feedback = uploadArea.querySelector('.space-y-3');
+                feedback.innerHTML = `
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                        <i class="fas fa-check text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-medium">${file.name}</p>
+                        <p class="text-gray-400 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB • Referensi siap</p>
+                    </div>
+                `;
+            }
+        });
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+    <script>
+  const apiKeyInput = document.getElementById("apiKey");
+  const imageApiKeyInput = document.getElementById("imageApiKey");
+  const lockBtn1 = document.getElementById("lockApiBtn");
+  const lockBtn2 = document.getElementById("lockApiBtn2");
+
+  function syncApiKeyInputs(value, locked) {
+      apiKeyInput.value = value;
+      imageApiKeyInput.value = value;
+      apiKeyInput.readOnly = locked;
+imageApiKeyInput.readOnly = locked;
+      lockBtn1.textContent = locked ? "Change" : "Lock";
+      lockBtn2.textContent = locked ? "Change" : "Lock";
+  }
+
+  // Load from localStorage saat refresh
+  window.addEventListener("load", () => {
+      const savedKey = localStorage.getItem("geminiApiKey") || "";
+      const locked = localStorage.getItem("geminiApiKeyLocked") === "true";
+      syncApiKeyInputs(savedKey, locked);
+  });
+
+  function toggleLock() {
+    const locked = localStorage.getItem("geminiApiKeyLocked") === "true";
+    if (locked) {
+        // Unlock & kosongkan
+        localStorage.setItem("geminiApiKeyLocked", "false");
+        localStorage.removeItem("geminiApiKey");
+        syncApiKeyInputs("", false);
+    } else {
+        // Ambil key dari salah satu input (kalau image kosong, pakai video, dan sebaliknya)
+        let key = apiKeyInput.value.trim() || imageApiKeyInput.value.trim();
+        
+        if (!key) {
+            alert("Isi API Key terlebih dahulu!");
             return;
         }
 
-        try {
-            const apiKeyInput = document.getElementById('apiKeyInput');
-            const apiKey = apiKeyInput.value.trim();
-
-            loading.style.display = "block";
-            document.getElementById('loadingIcon').className = 'fas fa-sync-alt text-indigo-400 text-2xl fa-spin';
-            document.getElementById('loadingTitle').textContent = 'Checking Status';
-            document.getElementById('loadingDescription').innerHTML = 'Please wait while we check the video status...';
-
-            const checkResponse = await fetch(`/api/check-video-status?operationId=${operationId}&apiKey=${apiKey}`);
-            const checkData = await checkResponse.json();
-
-            loading.style.display = "none";
-            
-            if (checkData.status === 'complete') {
-                const videoUrl = checkData.videoUrl;
-                result.innerHTML = `
-                    <div class="glass-morphism rounded-3xl p-8 hover-lift">
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 pulse-glow">
-                                <i class="fas fa-check text-white text-3xl"></i>
-                            </div>
-                            <h3 class="text-white font-bold text-2xl mb-2">Video Found!</h3>
-                            <p class="text-gray-400">Your video is ready for download.</p>
-                        </div>
-                        
-                        <div class="bg-black/50 rounded-2xl p-6 mb-8">
-                            <video controls muted class="w-full rounded-xl shadow-2xl">
-                                <source src="${videoUrl}" type="video/mp4">
-                                Browser Anda tidak mendukung pemutar video.
-                            </video>
-                        </div>
-                        
-                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                            <a href="${videoUrl}" download="vidcraft_output.mp4" 
-                               class="flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                                <i class="fas fa-download mr-2"></i>
-                                Download HD Video
-                            </a>
-                            <button onclick="generateAnother()" 
-                                    class="flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                                <i class="fas fa-plus mr-2"></i>
-                                Generate Another
-                            </button>
-                        </div>
-                    </div>
-                `;
-                getVideoSize(videoUrl);
-                result.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else if (checkData.status === 'processing') {
-                result.innerHTML = `
-                    <div class="glass-morphism rounded-3xl p-8 border-l-4 border-yellow-500">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-hourglass-half text-yellow-400 text-xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-white font-semibold text-lg mb-2">Video Masih Diproses</h3>
-                                <p class="text-yellow-300 mb-4">Kami masih menunggu video selesai. Mohon tunggu beberapa saat lagi dan cek kembali.</p>
-                                <button onclick="checkStatus()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                                    <i class="fas fa-redo mr-2"></i>Cek Lagi
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                handleConnectionError(new Error(checkData.error || "Terjadi kesalahan saat memeriksa status."));
-            }
-        } catch (err) {
-            handleConnectionError(err);
-        }
+        // Simpan & kunci
+        localStorage.setItem("geminiApiKey", key);
+        localStorage.setItem("geminiApiKeyLocked", "true");
+        syncApiKeyInputs(key, true);
     }
-
-    // Enhanced file upload feedback for both forms
-    const imageInput = document.getElementById('image');
-    const referenceImageInput = document.getElementById('referenceImage');
-
-    imageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const uploadArea = e.target.closest('.relative');
-            const feedback = uploadArea.querySelector('.space-y-3');
-            feedback.innerHTML = `
-                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                    <i class="fas fa-check text-white text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-white font-medium">${file.name}</p>
-                    <p class="text-gray-400 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB • Siap diproses</p>
-                </div>
-            `;
-        }
-    });
-
-    referenceImageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const uploadArea = e.target.closest('.relative');
-            const feedback = uploadArea.querySelector('.space-y-3');
-            feedback.innerHTML = `
-                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                    <i class="fas fa-check text-white text-xl"></i>
-                </div>
-                <div>
-                    <p class="text-white font-medium">${file.name}</p>
-                    <p class="text-gray-400 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB • Referensi siap</p>
-                </div>
-            `;
-        }
-    });
-
-    // Smooth scrolling for navigation
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
-            }
-        });
-    });
-
-    // Fungsi untuk toggle API key lock
-    const lockBtn1 = document.getElementById('lockBtn1');
-    const lockBtn2 = document.getElementById('lockBtn2');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const imageApiKeyInput = document.getElementById('imageApiKeyInput');
-
-    function syncApiKeyInputs(key, locked) {
-        apiKeyInput.value = key;
-        imageApiKeyInput.value = key;
-        apiKeyInput.readOnly = locked;
-        imageApiKeyInput.readOnly = locked;
-        lockBtn1.innerHTML = locked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-unlock"></i>';
-        lockBtn2.innerHTML = locked ? '<i class="fas fa-lock"></i>' : '<i class="fas fa-unlock"></i>';
-    }
-
-    function loadSavedApiKey() {
-        const key = localStorage.getItem("geminiApiKey");
-        const locked = localStorage.getItem("geminiApiKeyLocked") === "true";
-        if (key && locked) {
-            syncApiKeyInputs(key, true);
-        }
-    }
-
-    function toggleLock() {
-        const locked = localStorage.getItem("geminiApiKeyLocked") === "true";
-        if (locked) {
-            // Unlock & kosongkan
-            localStorage.setItem("geminiApiKeyLocked", "false");
-            localStorage.removeItem("geminiApiKey");
-            syncApiKeyInputs("", false);
-        } else {
-            // Ambil key dari salah satu input (kalau image kosong, pakai video, dan sebaliknya)
-            let key = apiKeyInput.value.trim() || imageApiKeyInput.value.trim();
-            
-            if (!key) {
-                alert("Isi API Key terlebih dahulu!");
-                return;
-            }
-
-            // Simpan & kunci
-            localStorage.setItem("geminiApiKey", key);
-            localStorage.setItem("geminiApiKeyLocked", "true");
-            syncApiKeyInputs(key, true);
-        }
-    }
+}
 
 
-    lockBtn1.addEventListener("click", toggleLock);
-    lockBtn2.addEventListener("click", toggleLock);
+  lockBtn1.addEventListener("click", toggleLock);
+  lockBtn2.addEventListener("click", toggleLock);
 </script>
 <script>
     async function getVideoSize(videoPath) {
