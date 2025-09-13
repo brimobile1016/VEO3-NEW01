@@ -50,7 +50,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "Saipul";
 const jobs = {};
 
 // ====================== API GENERATE VIDEO ======================
-app.post("/generate-video", upload.single("image"), async (req, res) => {
+router.post("/generate-video", upload.single("image"), async (req, res) => {
   const { apiKey, prompt, aspectRatio, veoModel } = req.body;
   const file = req.file;
 
