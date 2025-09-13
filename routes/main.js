@@ -78,7 +78,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
 
         while (!operation.done) {
             console.log("⏳ [DEBUG] Menunggu proses video selesai...");
-            await new Promise((r) => setTimeout(r, 5000));
+            await new Promise((r) => setTimeout(r, 10000));
             operation = await ai.operations.getVideosOperation({ operation });
         }
 
@@ -93,24 +93,31 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
             file: videoFile,
             returnAs: 'stream'
         });
-      
-        // Buat nama file unik untuk Supabase
+
+        // Buat nama file unik
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
         const fileName = `generated_video_${randomNumber}.mp4`;
 
-        console.log("⬆️ [DEBUG] Mengunggah video ke Supabase Storage...");
-        const { data, error: uploadError } = await supabase.storage
-            .from('generated-files') // Ganti dengan nama bucket Anda
-            .upload(`videos/${fileName}`, videoStream, {
-                contentType: 'video/mp4',
-            });
-
-        if (uploadError) {
-            console.error("❌ [DEBUG] Gagal mengunggah ke Supabase:", uploadError);
-            return res.status(500).json({ error: "Gagal mengunggah video ke penyimpanan." });
-        }
+        console.log("⬆️ [DEBUG] Mengunggah stream video ke Supabase Storage...");
         
-        // Dapatkan URL publik dari video
+        // Buat Promise untuk memastikan stream selesai
+        const uploadPromise = new Promise((resolve, reject) => {
+            const passthrough = new PassThrough();
+            videoStream.pipe(passthrough);
+
+            supabase.storage
+                .from('generated-files')
+                .upload(`videos/${fileName}`, passthrough, {
+                    contentType: 'video/mp4',
+                    cacheControl: '3600',
+                })
+                .then(resolve)
+                .catch(reject);
+        });
+
+        await uploadPromise;
+        console.log("✅ [DEBUG] Pengunggahan stream selesai.");
+        
         const { data: publicUrlData } = supabase.storage
             .from('generated-files')
             .getPublicUrl(`videos/${fileName}`);
@@ -118,9 +125,7 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         const videoUrl = publicUrlData.publicUrl;
         console.log("✅ [DEBUG] Video berhasil diunggah. URL:", videoUrl);
 
-        // Kirimkan URL video kembali ke klien
-       // res.status(200).json({ videoUrl });
-      res.json({ videoUrl: videoUrl, fileName });
+        res.json({ videoUrl: videoUrl, fileName });
 
     } catch (err) {
         console.error("❌ [DEBUG] ERROR:", err);
