@@ -8,7 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Buffer } from "buffer";
 import { supabase } from "./supabase.js";
 import fetch from "node-fetch";
-import { PassThrough } from 'stream';
+// import { PassThrough } from 'stream';
 
 const router = express();
 const upload = multer({ dest: path.join(os.tmpdir(), "uploads") });
@@ -83,46 +83,46 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
             operation = await ai.operations.getVideosOperation({ operation });
         }
 
-        const videoFile = operation.response?.generatedVideos?.[0]?.video;
-        if (!videoFile) {
+        const videoFile = operation.response?.generatedVideos?.[0];
+        if (!videoFile?.video?.uri) {
             console.error("❌ [DEBUG] Video tidak tersedia dalam response.");
             return res.status(500).json({ error: "Video tidak tersedia dalam response." });
         }
 
-        console.log("📥 [DEBUG] Mengunduh video dari AI sebagai stream...");
-        const videoStream = await ai.files.download({
-            file: videoFile,
-            returnAs: 'stream'
-        });
+        const videoUri = generatedVideo.video.uri;
+        console.log(`📥 [DEBUG] Mengunduh video dari URI: ${videoUri}`);
+
+      // Unduh video ke buffer
+        const response = await fetch(`${videoUri}&key=${apiKey}`);
+        const videoBuffer = await response.arrayBuffer();
+
+        if (videoBuffer.byteLength === 0) {
+            console.error("❌ [DEBUG] Video buffer kosong setelah diunduh.");
+            return res.status(500).json({ error: "Data video kosong setelah diunduh." });
+        }
+
+        console.log(`✅ [DEBUG] Video berhasil diunduh. Ukuran buffer: ${videoBuffer.byteLength} bytes`);
 
         // Buat nama file unik
         const randomNumber = Math.floor(10000 + Math.random() * 90000);
         const fileName = `generated_video_${randomNumber}.mp4`;
 
         console.log("⬆️ [DEBUG] Mengunggah stream video ke Supabase Storage...");
+      const { data, error: uploadError } = await supabase.storage
+            .from('generated-files') // Ganti dengan nama bucket Anda
+            .upload(`videos/${fileName}`, Buffer.from(videoBuffer), {
+                contentType: 'video/mp4',
+            });
         
-        // Buat Promise untuk memastikan stream selesai
-        const uploadPromise = new Promise((resolve, reject) => {
-            const passthrough = new PassThrough();
-            videoStream.pipe(passthrough);
-
-            supabase.storage
-                .from('generated-files')
-                .upload(`videos/${fileName}`, passthrough, {
-                    contentType: 'video/mp4',
-                    cacheControl: '3600',
-                })
-                .then(resolve)
-                .catch(reject);
-        });
-
-        await uploadPromise;
-        console.log("✅ [DEBUG] Pengunggahan stream selesai.");
+        if (uploadError) {
+            console.error("❌ [DEBUG] Gagal mengunggah ke Supabase:", uploadError);
+            return res.status(500).json({ error: "Gagal mengunggah video ke penyimpanan." });
+        }
         
         const { data: publicUrlData } = supabase.storage
             .from('generated-files')
             .getPublicUrl(`videos/${fileName}`);
-
+      
         const videoUrl = publicUrlData.publicUrl;
         console.log("✅ [DEBUG] Video berhasil diunggah. URL:", videoUrl);
 
