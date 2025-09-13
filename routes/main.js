@@ -96,17 +96,38 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         });
         console.log("✅ [DEBUG] Video berhasil diunduh sebagai buffer.");
         
-        // Kirimkan buffer video kembali ke klien dengan Content-Type yang benar
-        res.setHeader("Content-Type", "video/mp4");
-        res.send(videoBuffer);
+        // Buat nama file unik untuk Supabase
+        const randomNumber = Math.floor(10000 + Math.random() * 90000);
+        const fileName = `generated_video_${randomNumber}.mp4`;
+
+        console.log("⬆️ [DEBUG] Mengunggah video ke Supabase Storage...");
+        const { data, error: uploadError } = await supabase.storage
+            .from('generated-videos') // Ganti dengan nama bucket Anda
+            .upload(fileName, videoBuffer, {
+                contentType: 'video/mp4',
+            });
+
+        if (uploadError) {
+            console.error("❌ [DEBUG] Gagal mengunggah ke Supabase:", uploadError);
+            return res.status(500).json({ error: "Gagal mengunggah video ke penyimpanan." });
+        }
         
+        // Dapatkan URL publik dari video
+        const { data: publicUrlData } = supabase.storage
+            .from('generated-files')
+            .getPublicUrl(fileName);
+
+        const videoUrl = publicUrlData.publicUrl;
+        console.log("✅ [DEBUG] Video berhasil diunggah. URL:", videoUrl);
+
+        // Kirimkan URL video kembali ke klien
+        res.status(200).json({ videoUrl });
+
     } catch (err) {
         console.error("❌ [DEBUG] ERROR:", err);
         res.status(500).json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
     }
 });
-
-
 
 
 
