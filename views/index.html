@@ -149,35 +149,63 @@
 
     <!-- Navigation -->
     <nav class="relative z-50 py-6">
-        <div class="container mx-auto px-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center pulse-glow">
-                            <i class="fas fa-play text-white text-xl"></i>
-                        </div>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-white">Saipul Anuar</h1>
-                        <p class="text-xs text-gray-400 font-medium">STUDIO</p>
+    <div class="container mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center pulse-glow">
+                        <i class="fas fa-play text-white text-xl"></i>
                     </div>
                 </div>
-                
-                <div class="hidden md:flex items-center space-x-4">
-                    <button onclick="showVeoGenerator()" id="veoBtn" class="nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium">
-                        <i class="fas fa-video mr-2"></i>Generate Video
-                    </button>
-                    <button onclick="showImageGenerator()" id="imageBtn" class="nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium">
-                        <i class="fas fa-image mr-2"></i>Generate Image
-                    </button>
-                    <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300 font-medium px-4 py-2">Pricing</a>
-                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user text-white text-sm"></i>
-                    </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Saipul Anuar</h1>
+                    <p class="text-xs text-gray-400 font-medium">STUDIO</p>
+                </div>
+            </div>
+
+            <div class="md:hidden">
+                <button id="mobileMenuBtn" class="text-white text-2xl focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div id="desktopMenu" class="hidden md:flex items-center space-x-4">
+                <button onclick="showVeoGenerator()" id="veoBtn" class="nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium">
+                    <i class="fas fa-video mr-2"></i>Generate Video
+                </button>
+                <button onclick="showImageGenerator()" id="imageBtn" class="nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium">
+                    <i class="fas fa-image mr-2"></i>Generate Image
+                </button>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300 font-medium px-4 py-2">Pricing</a>
+                <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+
+    <div id="mobileMenu" class="md:hidden fixed top-0 left-0 w-full h-full bg-slate-900/90 backdrop-blur-md z-40 hidden">
+        <div class="p-6">
+            <div class="flex justify-end">
+                <button id="closeMobileMenuBtn" class="text-white text-2xl focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex flex-col items-center mt-12 space-y-6">
+                <button onclick="showVeoGenerator(); toggleMobileMenu()" class="text-white text-lg font-medium">
+                    <i class="fas fa-video mr-2"></i>Generate Video
+                </button>
+                <button onclick="showImageGenerator(); toggleMobileMenu()" class="text-white text-lg font-medium">
+                    <i class="fas fa-image mr-2"></i>Generate Image
+                </button>
+                <a href="#" onclick="toggleMobileMenu()" class="text-white text-lg font-medium">Pricing</a>
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
 
     <!-- Hero Section -->
     <section class="hero-bg tech-grid relative py-20">
@@ -633,6 +661,64 @@
             </div>
         </div>
     </footer>
+    <nav class="relative z-50 py-6">
+    <div class="container mx-auto px-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center pulse-glow">
+                        <i class="fas fa-play text-white text-xl"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Saipul Anuar</h1>
+                    <p class="text-xs text-gray-400 font-medium">STUDIO</p>
+                </div>
+            </div>
+
+            <div class="md:hidden">
+                <button id="mobileMenuBtn" class="text-white text-2xl focus:outline-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div id="desktopMenu" class="hidden md:flex items-center space-x-4">
+                <button onclick="showVeoGenerator()" id="veoBtn" class="nav-btn-active px-4 py-2 rounded-lg transition-all duration-300 font-medium">
+                    <i class="fas fa-video mr-2"></i>Generate Video
+                </button>
+                <button onclick="showImageGenerator()" id="imageBtn" class="nav-btn-inactive px-4 py-2 rounded-lg transition-all duration-300 font-medium">
+                    <i class="fas fa-image mr-2"></i>Generate Image
+                </button>
+                <a href="#" class="text-gray-300 hover:text-white transition-colors duration-300 font-medium px-4 py-2">Pricing</a>
+                <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobileMenu" class="md:hidden fixed top-0 left-0 w-full h-full bg-slate-900/90 backdrop-blur-md z-40 hidden">
+        <div class="p-6">
+            <div class="flex justify-end">
+                <button id="closeMobileMenuBtn" class="text-white text-2xl focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex flex-col items-center mt-12 space-y-6">
+                <button onclick="showVeoGenerator(); toggleMobileMenu()" class="text-white text-lg font-medium">
+                    <i class="fas fa-video mr-2"></i>Generate Video
+                </button>
+                <button onclick="showImageGenerator(); toggleMobileMenu()" class="text-white text-lg font-medium">
+                    <i class="fas fa-image mr-2"></i>Generate Image
+                </button>
+                <a href="#" onclick="toggleMobileMenu()" class="text-white text-lg font-medium">Pricing</a>
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
     <script>
     const videoForm = document.getElementById("videoForm");
     const imageForm = document.getElementById("imageForm");
