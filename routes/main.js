@@ -52,61 +52,42 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
     const { apiKey, prompt, aspectRatio, veoModel } = req.body;
     const file = req.file;
 
-    console.log("🚀 [DEBUG] Start generate-video endpoint");
-    console.log("[DEBUG] Request body:", req.body);
-    console.log("[DEBUG] File upload:", file);
-
-    if (!apiKey) {
-      console.log("❌ [DEBUG] API Key tidak diisi");
-      return res.json({ error: "API Key wajib diisi!" });
-    }
-
-    if (!prompt) {
-      console.log("❌ [DEBUG] Prompt tidak diisi");
-      return res.json({ error: "PROMPT wajib diisi!" });
-    }
+    if (!apiKey) return res.json({ error: "API Key wajib diisi!" });
+    if (!prompt) return res.json({ error: "Prompt wajib diisi!" });
 
     const ai = new GoogleGenAI({ apiKey });
-    console.log("🔑 [DEBUG] GoogleGenAI instance dibuat");
-
     let imageData = null;
 
+    // Jika ada upload image, pakai itu
     if (file) {
-      console.log("📷 [DEBUG] File image ditemukan, membaca file...");
       const imageBytes = fs.readFileSync(file.path);
       imageData = {
         imageBytes: imageBytes.toString("base64"),
         mimeType: file.mimetype,
       };
-      console.log("[DEBUG] Image data berhasil dibuat dari file upload");
     } else {
-      console.log("📷 [DEBUG] Tidak ada gambar, generate image via Imagen...");
-      const imagenResponse = await retryRequest(() =>
-        ai.models.generateImages({
-          model: "imagen-4.0-generate-001",
-          prompt,
-          config: {
-            numberOfImages: 1,
-            aspectRatio: aspectRatio || "16:9",
-            sampleImageSize: "1K",
-          },
-        })
-      );
+      // Generate image via Imagen
+      const imagenResponse = await ai.models.generateImages({
+        model: "imagen-4.0-generate-001",
+        prompt,
+        config: {
+          numberOfImages: 1,
+          aspectRatio: aspectRatio || "16:9",
+          sampleImageSize: "1K",
+        },
+      });
 
-      if (!imagenResponse.generatedImages?.length) {
-        console.log("❌ [DEBUG] Gagal generate gambar dengan Imagen");
+      if (!imagenResponse.generatedImages?.length)
         return res.json({ error: "Gagal generate gambar dengan Imagen." });
-      }
 
       imageData = {
         imageBytes: imagenResponse.generatedImages[0].image.imageBytes,
         mimeType: "image/png",
       };
-      console.log("[DEBUG] Image data berhasil dibuat dari Imagen");
     }
 
-    console.log("🎬 [DEBUG] Generate video dengan Veo 3 dimulai...");
-    const options = {
+    // Generate video dengan Veo
+    let operation = await ai.models.generateVideos({
       model: veoModel || "veo-3.0-generate-001",
       prompt,
       image: imageData,
@@ -114,61 +95,43 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         numberOfVideos: 1,
         aspectRatio: aspectRatio || "16:9",
       },
-    };
+    });
 
-    let operation = await ai.models.generateVideos(options);
-    console.log("[DEBUG] Operation awal:", JSON.stringify(operation, null, 2));
-
-    const operationId = operation.name || operation.operationId || operation.id;
-    if (!operationId) {
-      console.log("❌ [DEBUG] Gagal mendapatkan operationId");
-      return res.json({ error: "Gagal mendapatkan operationId dari response." });
-    }
-    console.log("🆔 [DEBUG] Operation ID:", operationId);
-
-    // Polling sampai selesai
+    // Polling sampai video selesai
     while (!operation.done) {
-      console.log("⏳ [DEBUG] Menunggu proses video...");
+      console.log("⏳ Menunggu video selesai...");
       await new Promise((r) => setTimeout(r, 5000));
       operation = await ai.operations.getVideosOperation({ operation });
-      console.log("🔁 [DEBUG] Operation update:", operation.done ? "Selesai" : "Belum selesai");
     }
 
-    console.log("[DEBUG] Operation selesai:", JSON.stringify(operation, null, 2));
+    const videoFile = operation.response?.generatedVideos?.[0]?.video;
+    if (!videoFile?.uri) return res.json({ error: "Video URI kosong." });
 
-if (!operation.response?.generatedVideos?.length) {
-  console.log("❌ [DEBUG] Gagal membuat video");
-  return res.json({ error: "Gagal membuat video, coba lagi." });
-}
-
-const videoFile = operation.response.generatedVideos[0].video;
-console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
-
-if (!videoFile?.uri) {
-  console.log("❌ [DEBUG] Video URI kosong");
-  return res.json({ error: "Video URI kosong, gagal download." });
-}
-
-  const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    // Download video ke server lokal
+    const randomNumber = Math.floor(10000 + Math.random() * 90000);
     const fileName = `generated_video_${randomNumber}.mp4`;
-const outputPath = path.join(outputDir, fileName);
+    const outputPath = path.join(os.tmpdir(), fileName);
 
-    // ✅ Simpan ke server lokal
-//   const outputPath = path.join(outputDir, "output_video.mp4");
     await ai.files.download({
       file: videoFile,
       downloadPath: outputPath,
     });
 
+    // Upload ke Supabase
+    const fileBuffer = fs.readFileSync(outputPath);
+    const { error: uploadError } = await supabase.storage
+      .from("generated-files")
+      .upload(`videos/${fileName}`, fileBuffer, { contentType: "video/mp4", upsert: true });
 
-    // ✅ Kembalikan URL agar bisa diakses langsung
-    res.json({ videoUrl: `/public/video/${fileName}`, fileName: `${fileName}` })    
+    fs.unlinkSync(outputPath); // hapus file lokal
+
+    if (uploadError) return res.json({ error: "Gagal upload ke Supabase" });
+
+    const { data } = supabase.storage.from("generated-files").getPublicUrl(`videos/${fileName}`);
+    res.json({ videoUrl: data.publicUrl, fileName });
   } catch (err) {
-    console.error("❌ [DEBUG] ERROR:", err);
-    if (err.message && err.message.includes("API key not valid")) {
-      return res.json({ error: "API Key tidak valid atau salah. Periksa kembali API Key Anda." });
-    }
-    return res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
+    console.error("❌ ERROR:", err);
+    res.json({ error: "Terjadi kesalahan saat membuat video. Silakan coba lagi." });
   }
 });
 
