@@ -148,11 +148,20 @@ if (!videoFile?.uri) {
   return res.json({ error: "Video URI kosong, gagal download." });
 }
 
-// ✅ Langsung kirim URI ke frontend (tanpa fetch manual)
-return res.json({
-  success: true,
-  videoUrl: videoFile.uri,
-});
+  const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    const fileName = `generated_video_${randomNumber}.mp4`;
+const outputPath = path.join(outputDir, fileName);
+
+    // ✅ Simpan ke server lokal
+//   const outputPath = path.join(outputDir, "output_video.mp4");
+    await ai.files.download({
+      file: videoFile,
+      downloadPath: outputPath,
+    });
+
+
+    // ✅ Kembalikan URL agar bisa diakses langsung
+    res.json({ videoUrl: `/public/video/${fileName}`, fileName: `${fileName}` }
     
   } catch (err) {
     console.error("❌ [DEBUG] ERROR:", err);
