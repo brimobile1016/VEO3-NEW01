@@ -151,6 +151,12 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
         videoUrl: publicUrlData.publicUrl,
       };
     } catch (err) {
+      console.error("❌ [ERROR] generate-video:", err);
+      // ✅ cek error API key invalid
+      if (err.message && err.message.includes("API key not valid")) {
+        jobs[jobId] = { status: "error", error: "API Key tidak valid atau salah." };
+        return;
+      }
       jobs[jobId] = { status: "error", error: err.message };
     }
   })();
