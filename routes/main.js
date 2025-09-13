@@ -91,7 +91,6 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
           },
         })
       );
-      console.log("[DEBUG] Imagen response:", JSON.stringify(imagenResponse, null, 2));
 
       if (!imagenResponse.generatedImages?.length) {
         console.log("❌ [DEBUG] Gagal generate gambar dengan Imagen");
@@ -149,19 +148,18 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
       return res.json({ error: "Video URI kosong, gagal download." });
     }
 
+    console.log("🎥 [DEBUG] Video URI:", videoFile.uri);
+
     const randomNumber = Math.floor(10000 + Math.random() * 90000);
     const fileName = `generated_video_${randomNumber}.mp4`;
     const localPath = path.join(os.tmpdir(), fileName);
 
-    // ===== Download video manual dengan fetch + Authorization =====
+    // ===== Download video tanpa Authorization header =====
     console.log("💾 [DEBUG] Download video dari URI ke lokal:", localPath);
 
-    const response = await fetch(videoFile.uri, {
-      headers: { "Authorization": `Bearer ${apiKey}` }
-    });
-
+    const response = await fetch(videoFile.uri); // ⚡ FIX
     if (!response.ok) {
-      console.log("❌ [DEBUG] Gagal fetch video:", response.statusText);
+      console.log("❌ [DEBUG] Gagal fetch video:", response.status, response.statusText);
       return res.json({ error: "Gagal download video dari Veo" });
     }
 
