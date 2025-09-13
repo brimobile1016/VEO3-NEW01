@@ -159,7 +159,17 @@ router.post("/generate-video", upload.single("image"), async (req, res) => {
   res.json({ jobId });
 });
 
+// ====================== API CEK STATUS JOB ======================
+router.get("/status/:jobId", (req, res) => {
+  const { jobId } = req.params;
+  const job = jobs[jobId];
 
+  if (!job) {
+    return res.status(404).json({ error: "Job tidak ditemukan" });
+  }
+
+  res.json(job);
+});
 
 
 
